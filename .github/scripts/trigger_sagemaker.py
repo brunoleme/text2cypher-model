@@ -29,7 +29,20 @@ def main():
             "TrainingInputMode": "File",
         },
         RoleArn=args.role_arn,
-        InputDataConfig=[],
+        InputDataConfig=[
+            {
+                'ChannelName': 'training',
+                'DataSource': {
+                    'S3DataSource': {
+                        'S3DataType': 'S3Prefix',
+                        'S3Uri': 's3://your-sagemaker-bucket/input-data/',  # <--- Replace with your real path
+                        'S3DataDistributionType': 'FullyReplicated'
+                    }
+                },
+                'ContentType': 'application/json',
+                'InputMode': 'File'
+            }
+        ],
         OutputDataConfig={
             "S3OutputPath": f"s3://your-sagemaker-bucket/output/{training_job_name}/"
         },
