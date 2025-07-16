@@ -1,0 +1,61 @@
+import argparse
+import boto3
+import datetime
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image-uri", required=True, help="ECR image URI")
+    parser.add_argument("--role-arn", required=True, help="SageMaker Execution Role ARN")
+    parser.add_argument("--job-name", required=True, help="Training Job Name")
+    parser.add_argument("--instance-type", default="ml.m5.large", help="Instance type")
+    parser.add_argument("--instance-count", type=int, default=1)
+    parser.add_argument("--env", required=True, choices=["dev", "staging", "prod"], help="Environment")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    client = boto3.client("sagemaker")
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    training_job_name = f"{args.job_name}-{timestamp}"
+
+    response = client.create_training_job(
+        TrainingJobName=training_job_name,
+        AlgorithmSpecification={
+            "TrainingImage": args.image_uri,
+            "TrainingInputMode": "File",
+        },
+        RoleArn=args.role_arn,
+        InputDataConfig=[],
+        OutputDataConfig={
+            "S3OutputPath": f"s3://your-sagemaker-bucket/output/{training_job_name}/"
+        },
+        ResourceConfig={
+            "InstanceType": args.instance_type,
+            "InstanceCount": args.instance_count,
+            "VolumeSizeInGB": 30,
+        },
+        StoppingCondition={"MaxRuntimeInSeconds": 3600},
+        Environment={
+            "ENV": args.env
+        },
+    )
+
+    print(f"Triggered training job: {training_job_name}")
+
+    # Wait until the training job completes
+    client.get_waiter("training_job_completed_or_stopped").wait(TrainingJobName=training_job_name)
+
+    desc = client.describe_training_job(TrainingJobName=training_job_name)
+    model_artifact_uri = desc["ModelArtifacts"]["S3ModelArtifacts"]
+
+    # Output for GitHub Actions
+    print(f"::set-output name=model_artifact_s3_uri::{model_artifact_uri}")
+    print(model_artifact_uri)
+
+
+if __name__ == "__main__":
+    main()

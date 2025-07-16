@@ -1,0 +1,69 @@
+name: Train on Staging (SageMaker)
+
+on:
+  push:
+    branches:
+      - staging
+
+env:
+  IMAGE_TAG: staging-latest
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+  SAGEMAKER_ROLE_ARN: ${{ secrets.SAGEMAKER_ROLE_ARN }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - run: make docker-build ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} IMAGE_TAG=${{ env.IMAGE_TAG }}
+      - run: make docker-push ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} IMAGE_TAG=${{ env.IMAGE_TAG }}
+
+  trigger-sagemaker:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    outputs:
+      model-artifact-s3-uri: ${{ steps.trigger.outputs.model_artifact_s3_uri }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: trigger
+        run: |
+          make sagemaker-trigger \
+            ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
+            IMAGE_TAG=${{ env.IMAGE_TAG }} \
+            SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
+            ENV=staging
+          echo "model_artifact_s3_uri=$MODEL_ARTIFACT_S3_URI" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_ENV: $GITHUB_ENV
+          GITHUB_OUTPUT: $GITHUB_OUTPUT
+
+  deploy-endpoint:
+    runs-on: ubuntu-latest
+    needs: trigger-sagemaker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Model to SageMaker Endpoint
+        run: make sagemaker-deploy-endpoint \
+          ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
+          IMAGE_TAG=${{ env.IMAGE_TAG }} \
+          SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
+          ENV=staging \
+          MODEL_ARTIFACT_S3_URI=${{ needs.trigger-sagemaker.outputs.model-artifact-s3-uri }}
