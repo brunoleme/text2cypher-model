@@ -10,7 +10,7 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 # Install project dependencies in editable mode
-RUN uv pip install -e .
+RUN uv pip install --system -e .
 
 # Optional: install extra tools if needed (e.g., testing, linting)
 # RUN uv pip install pytest ruff black mypy
