@@ -29,8 +29,7 @@ ARTIFACTS_DIR := $(shell \
 	fi)
 
 install:
-	pip install -e .
-	pip install pytest pytest-cov ruff black mypy
+	pip install -e .[dev]
 
 test:
 	PYTHONPATH=. ENV=$(ENV) pytest tests/ --cov=src --cov-report=term-missing -s
