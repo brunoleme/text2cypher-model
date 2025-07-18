@@ -17,7 +17,6 @@ MODEL_CLASSES = {
     "t5": "text2cypher.finetuning.models.t5_model.T5NoteGenerationModel",
 }
 
-@hydra.main(version_base="1.3", config_path="./config", config_name="config")
 def train(cfg: DictConfig):
     setup_logger(cfg.logging.log_path)
     logger.info(f"Starting training pipeline")

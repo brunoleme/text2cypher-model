@@ -1,9 +1,6 @@
 import os
 import hydra
 from omegaconf import OmegaConf
-from loguru import logger
-
-from text2cypher.finetuning.train import train
 from text2cypher.finetuning.evaluate_model import evaluate_model
 
 
@@ -15,15 +12,8 @@ def main():
     with hydra.initialize_config_dir(config_dir=config_path):
         cfg = hydra.compose(config_name=config_name)
 
-    logger.info(f"🚀 Starting pipeline with config:\n{OmegaConf.to_yaml(cfg)}")
-
-    logger.info("📦 Training model...")
-    train(cfg)
-
-    logger.info("📊 Running evaluation...")
+    print(OmegaConf.to_yaml(cfg))
     evaluate_model(cfg)
-
-    logger.success("✅ Pipeline completed!")
 
 
 if __name__ == "__main__":

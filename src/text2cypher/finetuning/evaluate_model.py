@@ -5,7 +5,6 @@ import torch
 from omegaconf import DictConfig
 
 from loguru import logger
-from hydra.main import main as hydra_main
 from typing import Dict
 import wandb
 
@@ -44,8 +43,6 @@ def run_metric_evaluation(title, cfg, dataloader_samples, metrics_dict, model, d
     gc.collect()
     return results_df
 
-
-@hydra_main(version_base="1.3", config_path="./config", config_name="config")
 def evaluate_model(cfg: DictConfig):
     with wandb.init(project="notechat-evaluation", name="models-comparison") as run:
         logger.info("Starting computing evaluation metrics")

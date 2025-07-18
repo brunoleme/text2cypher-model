@@ -34,9 +34,9 @@ data:
   test_samples: 10    # Use -1 for all test data
   shuffle: false        # Whether to shuffle datasets
   shuffle_seed: 42      # Random seed for reproducibility
-  train_split: 0.8
-  val_split: 0.1
-  test_split: 0.1
+  train_split: 0.5
+  val_split: 0.25
+  test_split: 0.25
   shuffle_buffer_size: 5000
   input_data_uri: "/opt/ml/input/data/training/notechat_dataset.csv"
 

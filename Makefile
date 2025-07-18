@@ -1,4 +1,4 @@
-.PHONY: install test lint format clean clean-artifacts check run train evaluate
+.PHONY: install test lint format clean clean-artifacts check run train evaluate clean-venv create-venv clean-all
 
 ENV ?= dev
 CONFIG_PATH ?= src/text2cypher/finetuning/config
@@ -69,27 +69,17 @@ clean-all: clean clean-venv
 
 check: lint test
 
-run: check-env
-	python scripts/run_pipeline.py --config-path=$(CONFIG_PATH) --config-name=config.$(ENV)
-
-run-dev:
-	$(MAKE) run ENV=dev
-
-
-run-staging:
-	$(MAKE) run ENV=staging
-
-run-prod:
-	$(MAKE) run ENV=prod
-
 check-env:
 	@test -f $(CONFIG_FILE) || (echo "Missing config file: $(CONFIG_FILE)" && exit 1)
 
 train:
-	python train.py --config-path=$(CONFIG_PATH)  --config-name=config.$(ENV)
+	PYTHONPATH=. ENV=$(ENV) python scripts/train.py
 
 evaluate:
-	python evaluate_model.py --config-path=$(CONFIG_PATH)  --config-name=config.$(ENV)
+	PYTHONPATH=. ENV=$(ENV) python scripts/evaluate_model.py
+
+run: check-env
+	PYTHONPATH=. ENV=$(ENV) python scripts/run_pipeline.py
 
 docker-build:
 	docker build -t $(ECR_REPOSITORY_URI):$(IMAGE_TAG) .
