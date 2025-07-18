@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 import hydra
@@ -23,8 +24,14 @@ def train(cfg: DictConfig):
 
     safe_model_name = cfg.model.name.replace("/", "_")
 
+    if cfg.data.sagemaker_run:
+        source_data_path = os.path.join(cfg.data.input_folder_uri, "notechat_dataset.csv")
+    else:
+        source_data_path = os.path.join("/opt/ml/input/data/training", "notechat_dataset.csv")
+
     datamodule = NoteChatDataModule(
         model_name=cfg.model.name,
+        source_data_path=source_data_path,
         batch_size=cfg.training.batch_size,
         max_length=cfg.model.max_length,
         num_workers=cfg.training.num_workers,

@@ -58,6 +58,15 @@ clean:
 clean-artifacts:
 	rm -rf $(ARTIFACTS_DIR)/*
 
+clean-venv:
+	rm -rf .venv
+
+create-venv:
+	python3.9 -m venv .venv
+	. .venv/bin/activate && pip install --upgrade pip setuptools
+
+clean-all: clean clean-venv
+
 check: lint test
 
 run: check-env

@@ -35,7 +35,7 @@ def main():
                 'DataSource': {
                     'S3DataSource': {
                         'S3DataType': 'S3Prefix',
-                        'S3Uri': 's3://your-sagemaker-bucket/input-data/',  # <--- Replace with your real path
+                        'S3Uri': f"s3://bl-portfolio-ml-sagemaker-{args.env}/input/",  # <--- Replace with your real path
                         'S3DataDistributionType': 'FullyReplicated'
                     }
                 },
@@ -44,7 +44,7 @@ def main():
             }
         ],
         OutputDataConfig={
-            "S3OutputPath": f"s3://your-sagemaker-bucket/output/{training_job_name}/"
+            "S3OutputPath": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/{training_job_name}/"
         },
         ResourceConfig={
             "InstanceType": args.instance_type,

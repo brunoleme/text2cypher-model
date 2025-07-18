@@ -4,10 +4,13 @@ import pytorch_lightning as pl
 from text2cypher.finetuning.data.notechat_dataset import NoteChatDataModule
 from text2cypher.finetuning.models.t5_model import T5NoteGenerationModel
 
+source_data_path = "tests/resources/notechat_sample_dataset.csv"
+
 @pytest.mark.integration
 def test_training_pipeline_runs_and_validates():
     datamodule = NoteChatDataModule(
         model_name="t5-small",
+        source_data_path=source_data_path,
         batch_size=2,
         max_length=128,
         num_workers=0,

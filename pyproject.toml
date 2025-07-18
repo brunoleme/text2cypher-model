@@ -22,7 +22,10 @@ dependencies = [
   "numpy<2.0",
   "nltk",
   "rouge-score",
-  "bert-score"
+  "bert-score",
+  "pandas",
+  "s3fs",
+  "boto3"
 ]
 
 [project.optional-dependencies]

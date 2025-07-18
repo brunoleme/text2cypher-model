@@ -65,6 +65,8 @@ def test_evaluate_model_pipeline(
 
     mock_load_model.assert_called_once()
     assert mock_compute_metrics.call_count == 3
+    mock_latency.assert_called_once()
+    mock_model_size.assert_called_once()
     mock_wandb_log.assert_called_once()
     mock_wandb_table.assert_called_once()
     run_mock.finish.assert_called_once()
@@ -92,6 +94,7 @@ def test_evaluate_model_runs(mock_log, mock_wandb_init, mock_load_model):
         class Data:
             shuffle = False
             shuffle_seed = 42
+            sagemaker_run = False
 
         class Evaluation:
             test_samples_lexical_metrics = 2

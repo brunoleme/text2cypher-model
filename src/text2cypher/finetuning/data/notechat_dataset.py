@@ -2,8 +2,9 @@ import os
 from functools import partial
 from typing import Dict, Optional
 
+import pandas as pd
 import pytorch_lightning as pl
-from datasets import load_dataset
+from datasets import Dataset
 from loguru import logger
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, DataCollatorForSeq2Seq
@@ -15,6 +16,7 @@ class NoteChatDataModule(pl.LightningDataModule):
     def __init__(
         self,
         model_name: str,
+        source_data_path: str,
         batch_size: int = 8,
         max_length: int = 128,
         max_source_length: int = 384,
@@ -31,6 +33,7 @@ class NoteChatDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         self.model_name = model_name
+        self.source_data_path = source_data_path
         self.batch_size = batch_size
         self.max_length = max_length
         self.max_source_length = max_source_length
@@ -69,12 +72,18 @@ class NoteChatDataModule(pl.LightningDataModule):
         )
 
     def prepare_data(self):
-        logger.info("Downloading NoteChat dataset if needed")
-        load_dataset("akemiH/NoteChat")
+        logger.info(f"Reading CSV from S3: {self.source_data_path}")
+        df = pd.read_csv(self.source_data_path)
+        assert {"conversation", "data"}.issubset(df.columns), "CSV must contain 'conversation' and 'data' columns"
+        self.dataset = Dataset.from_pandas(df)
+        logger.info(f"Loaded {len(self.dataset)} rows from S3.")
 
     def setup(self, stage: Optional[str] = None):
         logger.info(f"Setting up dataset for stage: {stage}")
-        full_dataset = load_dataset("akemiH/NoteChat")["train"]
+
+        self.prepare_data()
+
+        full_dataset = self.dataset.shuffle(seed=self.shuffle_seed)
         logger.debug(f"Dataset columns: {full_dataset.column_names}")
 
         n = len(full_dataset)
