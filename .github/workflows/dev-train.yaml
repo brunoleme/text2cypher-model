@@ -11,6 +11,7 @@ env:
   ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
   SAGEMAKER_ROLE_ARN: ${{ secrets.SAGEMAKER_ROLE_ARN }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
 
 jobs:
   test:
@@ -57,4 +58,4 @@ jobs:
           IMAGE_TAG=${{ env.IMAGE_TAG }} \
           SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
           ENV=dev \
-          WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}
+          WANDB_API_KEY=${{ env.WANDB_API_KEY }}

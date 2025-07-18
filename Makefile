@@ -92,7 +92,8 @@ sagemaker-trigger:
 		--image-uri $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
 		--role-arn $(SAGEMAKER_ROLE_ARN) \
 		--job-name text2cypher-$(ENV) \
-		--env $(ENV)) && \
+		--env $(ENV) \
+		--wandb-api-key $(WANDB_API_KEY)) && \
 	echo "MODEL_ARTIFACT_S3_URI=$$MODEL_URI" >> $(GITHUB_ENV)
 
 sagemaker-deploy-endpoint:
