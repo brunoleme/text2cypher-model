@@ -13,7 +13,7 @@ def main():
     config_path = os.path.abspath("src/text2cypher/finetuning/config")
 
     with hydra.initialize_config_dir(config_dir=config_path):
-        cfg = hydra.compose(config_name=config_name, version_base="1.3")
+        cfg = hydra.compose(config_name=config_name)
 
     logger.info(f"🚀 Starting pipeline with config:\n{OmegaConf.to_yaml(cfg)}")
 
