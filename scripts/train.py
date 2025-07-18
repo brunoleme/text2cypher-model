@@ -7,11 +7,10 @@ from text2cypher.finetuning.train import train
 def main():
     env = os.environ.get("ENV", "dev")
     config_name = f"config.{env}"
-    config_path = "src/text2cypher/finetuning/config"  # absolute path inside container
+    config_path = os.path.abspath("src/text2cypher/finetuning/config")
 
-    # Dynamically run hydra.compose instead of @hydra.main
     with hydra.initialize_config_dir(config_dir=config_path):
-        cfg = hydra.compose(config_name=config_name)
+        cfg = hydra.compose(config_name=config_name, version_base="1.3")
 
     print(OmegaConf.to_yaml(cfg))
     train(cfg)

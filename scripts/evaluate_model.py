@@ -7,10 +7,10 @@ from text2cypher.finetuning.evaluate_model import evaluate_model
 def main():
     env = os.environ.get("ENV", "dev")
     config_name = f"config.{env}"
-    config_path = "src/text2cypher/finetuning/config"
+    config_path = os.path.abspath("src/text2cypher/finetuning/config")
 
     with hydra.initialize_config_dir(config_dir=config_path):
-        cfg = hydra.compose(config_name=config_name)
+        cfg = hydra.compose(config_name=config_name, version_base="1.3")
 
     print(OmegaConf.to_yaml(cfg))
     evaluate_model(cfg)
