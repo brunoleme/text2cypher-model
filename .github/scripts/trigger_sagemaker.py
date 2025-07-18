@@ -27,6 +27,7 @@ def main():
         AlgorithmSpecification={
             "TrainingImage": args.image_uri,
             "TrainingInputMode": "File",
+            "ContainerEntrypoint": ["python", "train.py", "--config-path=src/text2cypher/finetuning/config", f"--config-name=config.{args.env}"],
         },
         RoleArn=args.role_arn,
         InputDataConfig=[

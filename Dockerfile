@@ -19,4 +19,4 @@ RUN uv pip install --system -e .
 ENV PYTHONPATH=/app
 
 # Default entrypoint for training (can override with CMD or docker run ...)
-CMD ["python", "train.py", "--config-path=src/text2cypher/finetuning/config", "--config-name=config.prod"]
+ENTRYPOINT ["python", "train.py", "--config-path=src/text2cypher/finetuning/config", "--config-name=config.prod"]
