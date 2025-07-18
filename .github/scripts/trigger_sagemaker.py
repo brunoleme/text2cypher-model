@@ -35,7 +35,7 @@ def main():
                 'DataSource': {
                     'S3DataSource': {
                         'S3DataType': 'S3Prefix',
-                        'S3Uri': f"s3://bl-portfolio-ml-sagemaker-{args.env}/input/",  # <--- Replace with your real path
+                        'S3Uri': f"s3://bl-portfolio-ml-sagemaker-source-data/notechat-dataset/notechat_dataset.csv",
                         'S3DataDistributionType': 'FullyReplicated'
                     }
                 },

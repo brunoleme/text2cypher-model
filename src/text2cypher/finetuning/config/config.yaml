@@ -38,8 +38,7 @@ data:
   val_split: 0.1
   test_split: 0.1
   shuffle_buffer_size: 5000
-  input_folder_uri: "src/text2cypher/finetuning/data"
-  sagemaker_run: false
+  input_data_uri: "/opt/ml/input/data/training/notechat_dataset.csv"
 
 evaluation:
   test_samples_lexical_metrics: 500

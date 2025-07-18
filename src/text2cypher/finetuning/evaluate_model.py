@@ -20,14 +20,9 @@ from text2cypher.finetuning.eval.metrics import (
 )
 
 def setup_dataloader(cfg, samples):
-    if cfg.data.sagemaker_run:
-        source_data_path = os.path.join(cfg.data.input_folder_uri, "notechat_dataset.csv")
-    else:
-        source_data_path = os.path.join("/opt/ml/input/data/training", "notechat_dataset.csv")
-
     data_module = NoteChatDataModule(
         model_name=cfg.model.name,
-        source_data_path=source_data_path,
+        source_data_path=cfg.data.input_data_uri,
         batch_size=cfg.training.batch_size,
         max_length=cfg.model.max_length,
         num_workers=cfg.training.num_workers,

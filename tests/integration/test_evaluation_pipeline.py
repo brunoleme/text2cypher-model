@@ -94,7 +94,7 @@ def test_evaluate_model_runs(mock_log, mock_wandb_init, mock_load_model):
         class Data:
             shuffle = False
             shuffle_seed = 42
-            sagemaker_run = False
+            input_data_uri = "tests/resources/notechat_sample_dataset.csv"
 
         class Evaluation:
             test_samples_lexical_metrics = 2
