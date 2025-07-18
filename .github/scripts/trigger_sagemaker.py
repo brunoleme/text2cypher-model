@@ -11,6 +11,7 @@ def parse_args():
     parser.add_argument("--instance-type", default="ml.m5.large", help="Instance type")
     parser.add_argument("--instance-count", type=int, default=1)
     parser.add_argument("--env", required=True, choices=["dev", "staging", "prod"], help="Environment")
+    parser.add_argument("--wandb-api-key", required=True, help="W&B API Key")
     return parser.parse_args()
 
 
@@ -54,7 +55,8 @@ def main():
         },
         StoppingCondition={"MaxRuntimeInSeconds": 3600},
         Environment={
-            "ENV": args.env
+            "ENV": args.env,
+            "WANDB_API_KEY": args.wandb_api_key
         },
     )
 

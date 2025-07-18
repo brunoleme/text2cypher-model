@@ -56,4 +56,5 @@ jobs:
           ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
           IMAGE_TAG=${{ env.IMAGE_TAG }} \
           SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
-          ENV=dev
+          ENV=dev \
+          WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}

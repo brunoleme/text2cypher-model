@@ -47,7 +47,8 @@ jobs:
             ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
             IMAGE_TAG=${{ env.IMAGE_TAG }} \
             SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
-            ENV=prod
+            ENV=prod \
+            WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}
           echo "model_artifact_s3_uri=$MODEL_ARTIFACT_S3_URI" >> $GITHUB_OUTPUT
         env:
           GITHUB_ENV: $GITHUB_ENV
