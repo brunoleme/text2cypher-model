@@ -52,6 +52,9 @@ jobs:
             ENV=staging \
             WANDB_API_KEY=${{ env.WANDB_API_KEY }}
           echo "model_artifact_s3_uri=$MODEL_ARTIFACT_S3_URI" >> $GITHUB_OUTPUT
+
+      - name: Echo URI
+        run: echo "Model saved to $MODEL_ARTIFACT_S3_URI"
         env:
           GITHUB_ENV: $GITHUB_ENV
           GITHUB_OUTPUT: $GITHUB_OUTPUT

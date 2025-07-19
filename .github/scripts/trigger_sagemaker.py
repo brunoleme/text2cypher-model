@@ -1,6 +1,7 @@
 import argparse
 import boto3
 import datetime
+import os
 
 
 def parse_args():
@@ -69,7 +70,8 @@ def main():
     model_artifact_uri = desc["ModelArtifacts"]["S3ModelArtifacts"]
 
     # Output for GitHub Actions
-    print(f"::set-output name=model_artifact_s3_uri::{model_artifact_uri}")
+    with open(os.environ["GITHUB_ENV"], "a") as f:
+        f.write(f"MODEL_ARTIFACT_S3_URI='{model_artifact_uri}'\n")
     print(model_artifact_uri)
 
 

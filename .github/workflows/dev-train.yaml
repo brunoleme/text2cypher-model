@@ -59,3 +59,6 @@ jobs:
           SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
           ENV=dev \
           WANDB_API_KEY=${{ env.WANDB_API_KEY }}
+
+      - name: Echo URI
+        run: echo "Model saved to $MODEL_ARTIFACT_S3_URI"

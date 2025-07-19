@@ -95,7 +95,7 @@ sagemaker-trigger:
 		--env $(ENV) \
 		--wandb-api-key $(WANDB_API_KEY) \
 		--instance-type ml.g4dn.xlarge) && \
-	echo "MODEL_ARTIFACT_S3_URI=$$MODEL_URI" >> $(GITHUB_ENV)
+	echo "model_artifact_s3_uri=$$MODEL_URI" >> $(GITHUB_OUTPUT)
 
 sagemaker-deploy-endpoint:
 	python .github/scripts/deploy_sagemaker_endpoint.py \
