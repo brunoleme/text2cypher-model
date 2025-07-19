@@ -94,6 +94,7 @@ sagemaker-trigger:
 		--job-name text2cypher-$(ENV) \
 		--env $(ENV) \
 		--wandb-api-key $(WANDB_API_KEY)) && \
+		--instance-type ml.g4dn.xlarge \
 	echo "MODEL_ARTIFACT_S3_URI=$$MODEL_URI" >> $(GITHUB_ENV)
 
 sagemaker-deploy-endpoint:
@@ -102,5 +103,5 @@ sagemaker-deploy-endpoint:
 		--role-arn $(SAGEMAKER_ROLE_ARN) \
 		--endpoint-name text2cypher-$(ENV)-endpoint \
 		--model-data-s3-uri $(MODEL_ARTIFACT_S3_URI) \
-		--instance-type ml.m5.large \
+		--instance-type ml.g4dn.xlarge \
 		--instance-count 1
