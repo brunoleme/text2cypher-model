@@ -62,7 +62,9 @@ jobs:
 
       - name: Output Lambda ARN
         id: lambda_output
-        run: echo "lambda_deployment_arn=$(terraform output -raw lambda_function_arn)" >> $GITHUB_OUTPUT
+        run: |
+          LAMBDA_ARN=$(terraform output -raw lambda_function_arn)
+          echo "lambda_deployment_arn=$LAMBDA_ARN" >> "$GITHUB_OUTPUT"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
