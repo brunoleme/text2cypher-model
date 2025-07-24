@@ -12,6 +12,10 @@ env:
   SAGEMAKER_ROLE_ARN: ${{ secrets.SAGEMAKER_ROLE_ARN }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+  PREPROCESSING_INSTANCE_TYPE: ml.g4dn.xlarge
+  TRAINING_INSTANCE_TYPE: ml.g4dn.xlarge
+  EVALUATION_INSTANCE_TYPE: ml.g4dn.xlarge
+  DEPLOYMENT_INSTANCE_TYPE: ml.g4dn.xlarge
 
 jobs:
   test:
@@ -41,10 +45,33 @@ jobs:
         
       - run: make docker-build ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} IMAGE_TAG=${{ env.IMAGE_TAG }}
       - run: make docker-push ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} IMAGE_TAG=${{ env.IMAGE_TAG }}
+      
+  deploy-lambda:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform-lambda-sagemaker
+    outputs:
+      lambda-deployment-arn: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Output Lambda ARN
+        id: lambda_output
+        run: echo "lambda_deployment_arn=$(terraform output -raw lambda_function_arn)" >> $GITHUB_OUTPUT
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [build-and-push, deploy-lambda]
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v3
@@ -53,12 +80,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - run: make sagemaker-trigger \
+      - run: make sagemaker-pipeline-trigger \
           ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
           IMAGE_TAG=${{ env.IMAGE_TAG }} \
           SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
           ENV=dev \
-          WANDB_API_KEY=${{ env.WANDB_API_KEY }}
+          WANDB_API_KEY=${{ env.WANDB_API_KEY }} \
+          OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
+          PREPROCESSING_INSTANCE_TYPE=${{ env.PREPROCESSING_INSTANCE_TYPE }} \
+          TRAINING_INSTANCE_TYPE=${{ env.TRAINING_INSTANCE_TYPE }} \
+          EVALUATION_INSTANCE_TYPE=${{ env.EVALUATION_INSTANCE_TYPE }} \
+          DEPLOYMENT_INSTANCE_TYPE=${{ env.DEPLOYMENT_INSTANCE_TYPE }} \
+          LAMBDA_DEPLOYMENT_ARN=${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}
 
-      - name: Echo URI
-        run: echo "Model saved to $MODEL_ARTIFACT_S3_URI"
+      - name: Output SageMaker Pipeline Execution ARN
+        run: echo "Pipeline triggered successfully"

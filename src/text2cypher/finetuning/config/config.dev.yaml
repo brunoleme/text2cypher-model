@@ -25,7 +25,7 @@ training:
   gradient_clip_val: 1.0
   max_epochs: 5
   num_workers: 4
-  checkpoint_dir: "checkpoints"
+  model_artifact_dir: "/opt/ml/processing/output/model-artifacts-dev"
   devices: "auto"
 
 data:
@@ -38,13 +38,14 @@ data:
   val_split: 0.25
   test_split: 0.25
   shuffle_buffer_size: 5000
-  input_data_uri: "/opt/ml/input/data/training/notechat_dataset.csv"
+  source_data_folder: "/opt/ml/processing/input/source-data"
+  source_data_path: "notechat-dataset/notechat_dataset.csv"
+  preprocessed_output_data_folder: "/opt/ml/processing/output"
+  preprocessed_input_data_folder: "/opt/ml/processing/input"
 
 evaluation:
+  reports_dir: "/opt/ml/processing/output/reports-dev"
   test_samples_lexical_metrics: 16
   test_samples_semantic_metrics: 16
   test_samples_ai_as_judge_metrics: 8
-
-evaluation_model:
-  checkpoint: "checkpoints/best-t5-small-peftlora-20250711-143428-epoch04-val_loss4.43.ckpt"
-  display_name: "t5-small-peftlora"
+  

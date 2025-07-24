@@ -1,41 +1,25 @@
-import pytest
-import pytorch_lightning as pl
+import os
+from pathlib import Path
+from text2cypher.finetuning.train import train
+from tests.utils import load_config_with_overrides, run_preprocessing_for_tests
 
-from text2cypher.finetuning.data.notechat_dataset import NoteChatDataModule
-from text2cypher.finetuning.models.t5_model import T5NoteGenerationModel
 
-source_data_path = "tests/resources/notechat_sample_dataset.csv"
+def test_training_pipeline(temp_output_dirs):
+    run_preprocessing_for_tests(temp_output_dirs["preprocessed_input_data_folder"])
 
-@pytest.mark.integration
-def test_training_pipeline_runs_and_validates():
-    datamodule = NoteChatDataModule(
-        model_name="t5-small",
-        source_data_path=source_data_path,
-        batch_size=2,
-        max_length=128,
-        num_workers=0,
-        train_samples=4,
-        val_samples=2,
+    cfg = load_config_with_overrides(
+        data={
+            "preprocessed_input_data_folder": "tests/resources/preprocessed",
+            "source_data_folder": "tests/resources",
+            "source_data_path": "source_data/notechat_sample_dataset.csv",
+            },
+        training={"model_artifact_dir": "tests/resources/artifacts"}
     )
 
-    model = T5NoteGenerationModel(
-        model_name="t5-small",
-        model_type="t5",
-        learning_rate=1e-4,
-        use_quantization=False,
-    )
+    os.environ["ENV"] = "dev"
+    os.environ["PIPELINE_RUN_ID"] = "pipeline_id"
+    train(cfg)
 
-    trainer = pl.Trainer(
-        max_epochs=1,
-        accelerator="cpu",
-        enable_progress_bar=False,
-        logger=False,
-    )
-
-    trainer.fit(model, datamodule=datamodule)
-
-    assert trainer.global_step > 0  # confirms training loop ran
-
-    # Optional: run validation manually and check metrics
-    val_metrics = trainer.validate(model=model, datamodule=datamodule)
-    assert "val_loss" in val_metrics[0]
+    ckpts = list(Path(cfg.training.model_artifact_dir).glob("pipeline_id_best_model.ckpt"))
+    assert len(ckpts) == 1
+    assert ckpts[0].stat().st_size > 0

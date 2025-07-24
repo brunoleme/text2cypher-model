@@ -1,4 +1,4 @@
-.PHONY: install test lint format clean clean-artifacts check run train evaluate clean-venv create-venv clean-all
+.PHONY: install test lint format clean clean-artifacts check run train evaluate clean-venv create-venv clean-all sagemaker-trigger sagemaker-pipeline-trigger
 
 ENV ?= dev
 CONFIG_PATH ?= src/text2cypher/finetuning/config
@@ -18,7 +18,8 @@ help:
 	@echo "  docker-build                  Build Docker image for ECR"
 	@echo "  docker-push                   Push Docker image to ECR"
 	@echo "  sagemaker-trigger             Trigger SageMaker training job"
-	@echo "  sagemaker-deploy-endpoint      Deploy model to SageMaker Endpoint"
+	@echo "  sagemaker-pipeline-trigger    Trigger SageMaker preprocess-train-eval-deploy pipeline"
+	@echo "  sagemaker-deploy-endpoint     Deploy model to SageMaker Endpoint"
 
 
 ARTIFACTS_DIR := $(shell \
@@ -95,6 +96,28 @@ sagemaker-trigger:
 		--env $(ENV) \
 		--wandb-api-key $(WANDB_API_KEY) \
 		--instance-type ml.g4dn.xlarge)
+
+PREPROCESSING_INSTANCE_TYPE ?= ml.g4dn.xlarge
+TRAINING_INSTANCE_TYPE ?= ml.g4dn.xlarge
+EVALUATION_INSTANCE_TYPE ?= ml.g4dn.xlarge
+DEPLOYMENT_INSTANCE_TYPE ?= ml.g4dn.xlarge
+
+sagemaker-pipeline-trigger:
+	@MODEL_URI=$$(python .github/scripts/trigger_sagemaker_pipeline.py \
+		--image-uri $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
+		--role-arn $(SAGEMAKER_ROLE_ARN) \
+		--job-name text2cypher-$(ENV) \
+		--env $(ENV) \
+		--wandb-api-key $(WANDB_API_KEY) \
+		--openai-api-key $(OPENAI_API_KEY) \
+		--preprocessing-instance-type $(PREPROCESSING_INSTANCE_TYPE) \
+		--preprocessing-instance-count 1 \
+		--training-instance-type $(TRAINING_INSTANCE_TYPE) \
+		--training-instance-count 1 \
+		--evaluation-instance-type $(EVALUATION_INSTANCE_TYPE) \
+		--evaluation-instance-count 1 \
+		--deployment-instance-type $(DEPLOYMENT_INSTANCE_TYPE) \
+		--lambda-deployment-arn $(LAMBDA_DEPLOYMENT_ARN)
 
 sagemaker-deploy-endpoint:
 	python .github/scripts/deploy_sagemaker_endpoint.py \
