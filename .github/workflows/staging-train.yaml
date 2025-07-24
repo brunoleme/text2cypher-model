@@ -47,6 +47,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Clean up existing Lambda and Role (if any)
+        run: |
+          aws lambda delete-function --function-name sagemaker-deployer || true
+          aws iam delete-role-policy --role-name lambda-sagemaker-role --policy-name lambda-sagemaker-access || true
+          aws iam detach-role-policy --role-name lambda-sagemaker-role --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole || true
+          aws iam detach-role-policy --role-name lambda-sagemaker-role --policy-arn arn:aws:iam::aws:policy/AmazonSageMakerFullAccess || true
+          aws iam delete-role --role-name lambda-sagemaker-role || true
+
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.6
@@ -54,17 +62,8 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Previous Run Cleanup
-        run: terraform destroy -auto-approve || true
-
       - name: Terraform Apply
         run: terraform apply -auto-approve
-
-      - name: Output Lambda ARN
-        id: lambda_output
-        run: |
-          LAMBDA_ARN=$(terraform output -raw lambda_function_arn)
-          echo "lambda_deployment_arn=$LAMBDA_ARN" >> "$GITHUB_OUTPUT"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
