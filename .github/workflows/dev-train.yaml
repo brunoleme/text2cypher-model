@@ -84,10 +84,11 @@ jobs:
         id: lambda_output
         run: |
           echo "Fetching lambda ARN from terraform output..."
-          terraform output -raw lambda_deployment_arn > lambda_arn.txt
+          "${TERRAFORM_CLI_PATH}/terraform-bin" output -raw lambda_deployment_arn > lambda_arn.txt
           ARN=$(cat lambda_arn.txt | tr -d '\r\n')
           echo "Resolved ARN: $ARN"
           echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
+
 
       - name: Fail if Lambda ARN is not set
         run: |
