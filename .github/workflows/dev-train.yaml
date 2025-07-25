@@ -101,7 +101,7 @@ jobs:
         env:
           OUTPUT1: $
         run: |
-          echo "Lambda ARN: ${{ steps.lambda_output.outputs.test }}"
+          echo "Lambda ARN: ${{ steps.lambda_output.outputs.output1 }}"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
