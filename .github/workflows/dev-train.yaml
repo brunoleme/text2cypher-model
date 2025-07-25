@@ -89,6 +89,11 @@ jobs:
           echo "Resolved ARN: $ARN"
           echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
 
+      - id: step1
+        run: echo "test=hello" >> "$GITHUB_OUTPUT"
+      - id: step2
+        run: echo "test=world" >> "$GITHUB_OUTPUT"
+
       - name: Debug GITHUB_OUTPUT
         run: cat $GITHUB_OUTPUT
 
