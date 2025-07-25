@@ -80,21 +80,17 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
-      - name: Debug Terraform Output
-        run: |
-          echo "Full raw output:"
-          terraform output -raw lambda_deployment_arn | tr -d '\r' | tr -d '\n'
-
       - name: Get Lambda Deployment ARN
         id: lambda_output
         run: |
           echo "Fetching lambda ARN from terraform output..."
           ARN=$(terraform output -raw lambda_deployment_arn | tr -d '\r' | tr -d '\n')
+          echo "Resolved ARN: $ARN"
           echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
 
       - name: Fail if Lambda ARN is not set
         run: |
-          if [ -z "${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}" ]; then
+          if [ -z "${{ steps.lambda_output.outputs.lambda_deployment_arn }}" ]; then
             echo "ERROR: Lambda ARN not found!"
             exit 1
           fi
