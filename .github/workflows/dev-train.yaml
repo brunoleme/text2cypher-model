@@ -85,7 +85,7 @@ jobs:
         id: lambda_output
         run: |
           echo "Fetching lambda ARN from terraform output..."
-          ARN=$(terraform output -raw lambda_deployment_arn | tr -d '\r\n')
+          ARN=$("${TERRAFORM_CLI_PATH}/terraform-bin" output -raw lambda_deployment_arn 2>/dev/null | tr -d '\r\n')
           echo "Resolved ARN: $ARN"
           echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
 
