@@ -89,6 +89,9 @@ jobs:
           echo "Resolved ARN: $ARN"
           echo "lambda_deployment_arn=$ARN" >> $GITHUB_OUTPUT
 
+      - name: Debug GITHUB_OUTPUT
+        run: cat $GITHUB_OUTPUT
+
   test-getting-lambda-arn:
     runs-on: ubuntu-latest
     needs: deploy-lambda
