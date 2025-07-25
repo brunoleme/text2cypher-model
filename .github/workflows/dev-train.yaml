@@ -99,14 +99,19 @@ jobs:
       
   test_step_output:
     runs-on: ubuntu-latest
+    outputs:
+      step1_output: ${{ steps.step1.outputs.test }}
+      step2_output: ${{ steps.step2.outputs.test }}
     steps:
       - id: step1
         run: echo "test=hello" >> "$GITHUB_OUTPUT"
       - id: step2
         run: echo "test=world" >> "$GITHUB_OUTPUT"
 
-      - name: Debug GITHUB_OUTPUT
-        run: cat $GITHUB_OUTPUT
+      - name: Show step outputs
+        run: |
+          echo "step1 output: ${{ steps.step1.outputs.test }}"
+          echo "step2 output: ${{ steps.step2.outputs.test }}"
 
   test-getting-lambda-arn:
     runs-on: ubuntu-latest
