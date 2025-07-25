@@ -52,7 +52,7 @@ jobs:
       run:
         working-directory: terraform-lambda-sagemaker
     outputs:
-      lambda_deployment_arn: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}
+      lambda_deployment_arn: $
     steps:
       - uses: actions/checkout@v4
 
@@ -86,16 +86,15 @@ jobs:
           echo "Fetching lambda ARN from terraform output..."
           ARN=$("${TERRAFORM_CLI_PATH}/terraform-bin" output -raw lambda_deployment_arn | tr -d '\r\n')
           echo "Resolved ARN: $ARN"
-          echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
-
-      - name: Confirm Lambda ARN Output
-        run: |
-          echo "Got ARN: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
+          echo "$ARN" >> "$GITHUB_OUTPUT"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
     needs: [build-and-push, deploy-lambda]
     steps:
+      - env:
+          lambda_deployment_arn: $
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -112,7 +111,7 @@ jobs:
       
       - name: Confirm Lambda ARN
         run: |
-          echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda_deployment_arn }}"
+          echo "Lambda ARN: $lambda_deployment_arn"
 
       - name: Trigger SageMaker Pipeline
         run: |
@@ -127,7 +126,7 @@ jobs:
             TRAINING_INSTANCE_TYPE=${{ env.TRAINING_INSTANCE_TYPE }} \
             EVALUATION_INSTANCE_TYPE=${{ env.EVALUATION_INSTANCE_TYPE }} \
             DEPLOYMENT_INSTANCE_TYPE=${{ env.DEPLOYMENT_INSTANCE_TYPE }} \
-            LAMBDA_DEPLOYMENT_ARN=${{ needs.deploy-lambda.outputs.lambda_deployment_arn }}
+            LAMBDA_DEPLOYMENT_ARN=$lambda_deployment_arn
 
       - name: Output SageMaker Pipeline Execution ARN
         run: echo "Pipeline triggered successfully"
