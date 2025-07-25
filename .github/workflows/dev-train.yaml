@@ -96,6 +96,17 @@ jobs:
 
       - name: Debug GITHUB_OUTPUT
         run: cat $GITHUB_OUTPUT
+      
+  test_step_output:
+    runs-on: ubuntu-latest
+    steps:
+      - id: step1
+        run: echo "test=hello" >> "$GITHUB_OUTPUT"
+      - id: step2
+        run: echo "test=world" >> "$GITHUB_OUTPUT"
+
+      - name: Debug GITHUB_OUTPUT
+        run: cat $GITHUB_OUTPUT
 
   test-getting-lambda-arn:
     runs-on: ubuntu-latest
