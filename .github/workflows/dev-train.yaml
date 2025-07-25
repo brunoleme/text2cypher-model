@@ -53,7 +53,7 @@ jobs:
       run:
         working-directory: terraform-lambda-sagemaker
     outputs:
-      output1: ${{ steps.lambda_output.outputs.test }}
+      lambda_deployment_arn: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}
     steps:
       - uses: actions/checkout@v4
 
@@ -85,29 +85,22 @@ jobs:
         id: lambda_output
         run: |
           echo "Fetching lambda ARN from terraform output..."
-          "${TERRAFORM_CLI_PATH}/terraform-bin" output -raw lambda_deployment_arn > lambda_arn.txt
-          ARN=$(cat lambda_arn.txt | tr -d '\r\n')
+          ARN=$(terraform output -raw lambda_deployment_arn | tr -d '\r\n')
           echo "Resolved ARN: $ARN"
-          echo "test=$ARN" >> "$GITHUB_OUTPUT"
+          echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
 
   test-getting-lambda-arn:
     runs-on: ubuntu-latest
-    needs: [deploy-lambda]
+    needs: deploy-lambda
     steps:
-
-      - uses: actions/checkout@v4
-      
       - name: Confirm Lambda ARN
-        env:
-          OUTPUT1: $
         run: |
-          echo "Lambda ARN: ${{ steps.lambda_output.outputs.output1 }}"
+          echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda_deployment_arn }}"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
     needs: [build-and-push, deploy-lambda]
     steps:
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -121,16 +114,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      
+
       - name: Confirm Lambda ARN
-        env:
-          OUTPUT1: $
         run: |
-          echo "Lambda ARN: $OUTPUT1"
+          echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda_deployment_arn }}"
 
       - name: Trigger SageMaker Pipeline
-        env:
-          OUTPUT1: $
         run: |
           make sagemaker-pipeline-trigger \
             ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
@@ -143,7 +132,7 @@ jobs:
             TRAINING_INSTANCE_TYPE=${{ env.TRAINING_INSTANCE_TYPE }} \
             EVALUATION_INSTANCE_TYPE=${{ env.EVALUATION_INSTANCE_TYPE }} \
             DEPLOYMENT_INSTANCE_TYPE=${{ env.DEPLOYMENT_INSTANCE_TYPE }} \
-            LAMBDA_DEPLOYMENT_ARN=$OUTPUT1
+            LAMBDA_DEPLOYMENT_ARN=${{ needs.deploy-lambda.outputs.lambda_deployment_arn }}
 
       - name: Output SageMaker Pipeline Execution ARN
         run: echo "Pipeline triggered successfully"
