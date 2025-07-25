@@ -1,3 +1,3 @@
-output "lambda_function_arn" {
+output "lambda_deployment_arn" {
   value = aws_lambda_function.sagemaker_deployer.arn
 }

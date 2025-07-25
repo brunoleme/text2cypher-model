@@ -80,6 +80,20 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
+      - name: Get Lambda Deployment ARN
+        id: lambda_output
+        run: |
+          echo "Fetching lambda ARN from terraform output..."
+          ARN=$(terraform output -raw lambda_deployment_arn)
+          echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Fail if Lambda ARN is not set
+      run: |
+        if [ -z "${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}" ]; then
+          echo "ERROR: Lambda ARN not found!"
+          exit 1
+        fi
+
   trigger-sagemaker:
     runs-on: ubuntu-latest
     needs: [build-and-push, deploy-lambda]
@@ -97,6 +111,9 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Confirm Lambda ARN
+        run: echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}"
 
       - run: make sagemaker-pipeline-trigger \
           ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \

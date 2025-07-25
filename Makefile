@@ -103,7 +103,7 @@ EVALUATION_INSTANCE_TYPE ?= ml.g4dn.xlarge
 DEPLOYMENT_INSTANCE_TYPE ?= ml.g4dn.xlarge
 
 sagemaker-pipeline-trigger:
-	@MODEL_URI=$$(python .github/scripts/trigger_sagemaker_pipeline.py \
+	MODEL_URI=$$(python .github/scripts/trigger_sagemaker_pipeline.py \
 		--image-uri $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
 		--role-arn $(SAGEMAKER_ROLE_ARN) \
 		--job-name text2cypher-$(ENV) \
