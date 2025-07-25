@@ -83,7 +83,7 @@ jobs:
       - name: Debug Terraform Output
         run: |
           echo "Full raw output:"
-          terraform output lambda_deployment_arn -raw lambda_deployment_arn | tr -d '\r' | tr -d '\n'
+          terraform output -raw lambda_deployment_arn | tr -d '\r' | tr -d '\n'
 
       - name: Get Lambda Deployment ARN
         id: lambda_output
