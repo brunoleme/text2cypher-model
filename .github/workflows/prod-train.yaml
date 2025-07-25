@@ -101,8 +101,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Confirm Lambda ARN
-        run: echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}"
+      - run: echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}"
 
       - name: Trigger SageMaker Pipeline
         run: |
