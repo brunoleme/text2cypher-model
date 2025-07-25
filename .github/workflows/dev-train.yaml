@@ -96,6 +96,7 @@ jobs:
       - name: Confirm Lambda ARN
         run: |
           echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda_deployment_arn }}"
+          echo "GITHUB_OUTPUT: $GITHUB_OUTPUT"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
