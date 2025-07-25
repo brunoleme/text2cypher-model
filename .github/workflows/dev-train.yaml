@@ -84,10 +84,12 @@ jobs:
         id: lambda_output
         run: |
           echo "Fetching lambda ARN from terraform output..."
-          "${TERRAFORM_CLI_PATH}/terraform-bin" output -raw lambda_deployment_arn > lambda_arn.txt
-          ARN=$(cat lambda_arn.txt | tr -d '\r\n')
+          ARN=$("${TERRAFORM_CLI_PATH}/terraform-bin" output -raw lambda_deployment_arn | tr -d '\r\n')
           echo "Resolved ARN: $ARN"
           echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Confirm Lambda ARN Output
+        run: echo "Got ARN: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
