@@ -100,7 +100,8 @@ jobs:
       - name: Confirm Lambda ARN
         run: echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}"
 
-      - run: make sagemaker-pipeline-trigger \
+      - name: Trigger SageMaker Pipeline
+        run: make sagemaker-pipeline-trigger \
           ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
           IMAGE_TAG=${{ env.IMAGE_TAG }} \
           SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
