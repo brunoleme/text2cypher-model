@@ -80,6 +80,11 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
+      - name: Debug Terraform Output
+        run: |
+          echo "Full raw output:"
+          terraform output lambda_deployment_arn
+
       - name: Get Lambda Deployment ARN
         id: lambda_output
         run: |
