@@ -89,7 +89,8 @@ jobs:
           echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
 
       - name: Confirm Lambda ARN Output
-        run: echo "Got ARN: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
+        run: |
+          echo "Got ARN: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
