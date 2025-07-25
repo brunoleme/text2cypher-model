@@ -73,11 +73,11 @@ jobs:
           echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
 
       - name: Fail if Lambda ARN is not set
-      run: |
-        if [ -z "${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}" ]; then
-          echo "ERROR: Lambda ARN not found!"
-          exit 1
-        fi
+        run: |
+          if [ -z "${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}" ]; then
+            echo "ERROR: Lambda ARN not found!"
+            exit 1
+          fi
 
   trigger-sagemaker:
     runs-on: ubuntu-latest
