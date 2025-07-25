@@ -25,7 +25,8 @@ dependencies = [
   "bert-score",
   "pandas",
   "s3fs",
-  "boto3"
+  "boto3",
+  "sagemaker"
 ]
 
 [project.optional-dependencies]
