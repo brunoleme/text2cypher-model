@@ -91,8 +91,7 @@ jobs:
 
       - name: Get Lambda Deployment ARN
         id: lambda_output
-        run: |
-          echo "lambda_deployment_arn=hello" >> "$GITHUB_OUTPUT"
+        run: echo "lambda_deployment_arn=hello" >> "$GITHUB_OUTPUT"
 
       - name: Show step outputs
         run: |
