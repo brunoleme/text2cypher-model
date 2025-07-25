@@ -92,8 +92,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-push, deploy-lambda]
     steps:
-      - env:
-          lambda_deployment_arn: $
 
       - uses: actions/checkout@v4
 
@@ -110,10 +108,14 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       
       - name: Confirm Lambda ARN
+        env:
+          lambda_deployment_arn: $
         run: |
           echo "Lambda ARN: $lambda_deployment_arn"
 
       - name: Trigger SageMaker Pipeline
+        env:
+          lambda_deployment_arn: $
         run: |
           make sagemaker-pipeline-trigger \
             ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
