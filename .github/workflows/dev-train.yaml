@@ -53,7 +53,7 @@ jobs:
       run:
         working-directory: terraform-lambda-sagemaker
     outputs:
-      lambda_deployment_arn: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}
+      lambda_deployment_arn: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
     steps:
       - uses: actions/checkout@v4
 
@@ -94,8 +94,9 @@ jobs:
       - id: step2
         run: echo "test=world" >> "$GITHUB_OUTPUT"
 
-      - name: Debug GITHUB_OUTPUT
-        run: cat $GITHUB_OUTPUT
+      - name: Show step outputs
+        run: |
+          echo "lambda_output output: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
       
   test_step_output:
     runs-on: ubuntu-latest
