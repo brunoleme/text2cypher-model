@@ -116,18 +116,19 @@ jobs:
         run: echo "Lambda ARN: ${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}"
 
       - name: Trigger SageMaker Pipeline
-        run: make sagemaker-pipeline-trigger \
-          ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
-          IMAGE_TAG=${{ env.IMAGE_TAG }} \
-          SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
-          ENV=dev \
-          WANDB_API_KEY=${{ env.WANDB_API_KEY }} \
-          OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
-          PREPROCESSING_INSTANCE_TYPE=${{ env.PREPROCESSING_INSTANCE_TYPE }} \
-          TRAINING_INSTANCE_TYPE=${{ env.TRAINING_INSTANCE_TYPE }} \
-          EVALUATION_INSTANCE_TYPE=${{ env.EVALUATION_INSTANCE_TYPE }} \
-          DEPLOYMENT_INSTANCE_TYPE=${{ env.DEPLOYMENT_INSTANCE_TYPE }} \
-          LAMBDA_DEPLOYMENT_ARN=${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}
+        run: |
+          make sagemaker-pipeline-trigger \
+            ECR_REPOSITORY_URI=${{ env.ECR_REPOSITORY_URI }} \
+            IMAGE_TAG=${{ env.IMAGE_TAG }} \
+            SAGEMAKER_ROLE_ARN=${{ env.SAGEMAKER_ROLE_ARN }} \
+            ENV=dev \
+            WANDB_API_KEY=${{ env.WANDB_API_KEY }} \
+            OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
+            PREPROCESSING_INSTANCE_TYPE=${{ env.PREPROCESSING_INSTANCE_TYPE }} \
+            TRAINING_INSTANCE_TYPE=${{ env.TRAINING_INSTANCE_TYPE }} \
+            EVALUATION_INSTANCE_TYPE=${{ env.EVALUATION_INSTANCE_TYPE }} \
+            DEPLOYMENT_INSTANCE_TYPE=${{ env.DEPLOYMENT_INSTANCE_TYPE }} \
+            LAMBDA_DEPLOYMENT_ARN=${{ needs.deploy-lambda.outputs.lambda-deployment-arn }}
 
       - name: Output SageMaker Pipeline Execution ARN
         run: echo "Pipeline triggered successfully"
