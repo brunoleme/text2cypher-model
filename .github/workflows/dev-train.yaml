@@ -114,6 +114,15 @@ jobs:
           echo "step1 output: ${{ steps.step1.outputs.test }}"
           echo "step2 output: ${{ steps.step2.outputs.test }}"
 
+  use_outputs:
+    runs-on: ubuntu-latest
+    needs: test_step_output
+    steps:
+      - name: Print outputs from previous job
+        run: |
+          echo "Output from step1: ${{ needs.test_step_output.outputs.step1_output }}"
+          echo "Output from step2: ${{ needs.test_step_output.outputs.step2_output }}"
+
   test-getting-lambda-arn:
     runs-on: ubuntu-latest
     needs: deploy-lambda
