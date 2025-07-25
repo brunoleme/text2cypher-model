@@ -53,7 +53,7 @@ jobs:
       run:
         working-directory: terraform-lambda-sagemaker
     outputs:
-      lambda_deployment_arn: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
+      lambda_deployment_arn: ${{ steps.step1.outputs.lambda_deployment_arn }}"
     steps:
       - uses: actions/checkout@v4
 
@@ -89,13 +89,13 @@ jobs:
       #     echo "Resolved ARN: $ARN"
       #     echo "lambda_deployment_arn=$ARN" >> "$GITHUB_OUTPUT"
 
-      - name: Get Lambda Deployment ARN
-        id: lambda_output
+
+      - id: step1
         run: echo "lambda_deployment_arn=hello" >> "$GITHUB_OUTPUT"
 
       - name: Show step outputs
         run: |
-          echo "lambda_output output: ${{ steps.lambda_output.outputs.lambda_deployment_arn }}"
+          echo "lambda_output output: ${{ steps.step1.outputs.lambda_deployment_arn }}"
       
   test_step_output:
     runs-on: ubuntu-latest
