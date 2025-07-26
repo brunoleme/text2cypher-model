@@ -104,7 +104,7 @@ DEPLOYMENT_INSTANCE_TYPE ?= ml.g4dn.xlarge
 
 sagemaker-pipeline-trigger:
 	@echo "Running SageMaker trigger..."
-	MODEL_URI=$(python .github/scripts/trigger_sagemaker_pipeline.py \
+	python .github/scripts/trigger_sagemaker_pipeline.py \
 		--image-uri $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
 		--role-arn $(SAGEMAKER_ROLE_ARN) \
 		--job-name text2cypher-$(ENV) \
@@ -118,8 +118,7 @@ sagemaker-pipeline-trigger:
 		--evaluation-instance-type $(EVALUATION_INSTANCE_TYPE) \
 		--evaluation-instance-count 1 \
 		--deployment-instance-type $(DEPLOYMENT_INSTANCE_TYPE) \
-		--lambda-deployment-arn $(LAMBDA_DEPLOYMENT_ARN)) && \
-	echo "Got MODEL_URI: $$MODEL_URI"
+		--lambda-deployment-arn $(LAMBDA_DEPLOYMENT_ARN)
 
 sagemaker-deploy-endpoint:
 	python .github/scripts/deploy_sagemaker_endpoint.py \
