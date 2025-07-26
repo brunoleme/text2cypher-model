@@ -35,25 +35,51 @@ deployment_instance_type = ParameterString(name="DeploymentInstanceType", defaul
 
 preprocessed_data_output_uri = ParameterString(
     name="PreprocessedOutputS3Uri",
-    default_value=f"s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed"
+    default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed"
+)
+
+preprocessed_data_output_local_folder = ParameterString(
+    name="PreprocessedOutputLocalFolder",
+    default_value="/opt/ml/processing/output/preprocessed-dev"
 )
 
 training_artifacts_output_uri = ParameterString(
     name="TrainingOutputS3Uri",
-    default_value=f"s3://bl-portfolio-ml-sagemaker-dev/output/artifacts"
+    default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts"
+)
+
+training_input_local_folder = ParameterString(
+    name="TrainingInputLocalFolder",
+    default_value="/opt/ml/processing/input/preprocessed-dev"
+)
+
+training_output_local_folder = ParameterString(
+    name="TrainingOutputLocalFolder",
+    default_value="/opt/ml/processing/output/model-artifacts-dev"
 )
 
 evaluation_reports_output_uri = ParameterString(
     name="EvaluationOutputS3Uri",
-    default_value=f"s3://bl-portfolio-ml-sagemaker-dev/output/reports"
+    default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports"
+)
+
+evaluation_input_local_folder = ParameterString(
+    name="EvaluationInputLocalFolder",
+    default_value="/opt/ml/processing/input/model-artifacts-dev"
 )
 
 evaluation_report_path = ParameterString(
     name="EvaluationOutputPath",
-    default_value=f"s3://bl-portfolio-ml-sagemaker-dev/output/reports/eval_metrics.json"
+    default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports/eval_metrics.json"
 )
 
 lambda_deployment_arn = ParameterString(name="LambdaDeploymentARN", default_value="")
+
+project_config = ParameterString(
+    name="ProjectConfig",
+    default_value="config.dev"
+)
+
 
 preprocessing_processor = ScriptProcessor(
     image_uri=image_uri,
@@ -70,13 +96,13 @@ preprocessing_processor = ScriptProcessor(
 )
 
 preprocessing_step = ProcessingStep(
-    name=f"{job_prefix_name.to_string()}-{env_param.to_string()}-DataPreProcessing",
+    name="DataPreProcessing",
     processor=preprocessing_processor,
     code="scripts/preprocessing.py",
     source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
-        "--config-name", f"config.{env_param.to_string()}"
+        "--config-name", project_config
     ],
     inputs=[
         ProcessingInput(
@@ -87,7 +113,7 @@ preprocessing_step = ProcessingStep(
     ],
     outputs=[
         ProcessingOutput(
-            source=f"/opt/ml/processing/output/preprocessed-{env_param.to_string()}",
+            source=preprocessed_data_output_local_folder,
             destination=preprocessed_data_output_uri,
             output_name="training-data"
         )
@@ -109,24 +135,24 @@ training_processor = ScriptProcessor(
 )
 
 training_step = ProcessingStep(
-    name=f"{job_prefix_name.to_string()}-{env_param.to_string()}-TrainModel",
+    name="ModelTraining",
     processor=training_processor,
     code="scripts/train.py",
     source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
-        "--config-name", f"config.{env_param.to_string()}"
+        "--config-name", project_config
     ],
     inputs=[
         ProcessingInput(
             source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
-            destination=f"/opt/ml/processing/input/preprocessed-{env_param.to_string()}",
+            destination=training_input_local_folder,
             input_name="training-data"
         )
     ],
     outputs=[
         ProcessingOutput(
-            source=f"/opt/ml/processing/output/model-artifacts-{env_param.to_string()}",
+            source=training_output_local_folder,
             destination=training_artifacts_output_uri,
             output_name="model-artifacts"
         )
@@ -155,18 +181,18 @@ evaluation_report = PropertyFile(
 )
 
 evaluation_step = ProcessingStep(
-    name=f"{job_prefix_name}-{env_param}-EvaluateModel",
+    name="ModelEvaluation",
     processor=evaluation_processor,
     code="scripts/evaluate_model.py",
     source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
-        "--config-name", f"config.{env_param.to_string()}"
+        "--config-name", project_config
     ],
     inputs=[
         ProcessingInput(
             source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-            destination=f"/opt/ml/processing/input/model-artifacts-{env_param.to_string()}",
+            destination=evaluation_input_local_folder,
             input_name="model-artifacts"
         )
     ],
@@ -187,7 +213,7 @@ model = Model(
     sagemaker_session=session,
 )
 
-model_package_group_name = f"NoteChat-{pipeline_run_id_param}"
+model_package_group_name = "NoteChatModel"
 
 register_model_step = ModelStep(
     name="RegisterNoteChatModel",
@@ -198,7 +224,7 @@ register_model_step = ModelStep(
         transform_instances=[deployment_instance_type],
         model_package_group_name=model_package_group_name,
         approval_status="Approved",
-        description=f"Registered by pipeline run {pipeline_run_id_param.to_string()}",
+        description="Registered model for notechat generation",
     ),
 )
 
@@ -206,11 +232,11 @@ deploy_model_step = LambdaStep(
     name="DeployNoteChatModel",
     lambda_func=Lambda(session, function_arn=lambda_deployment_arn),
     inputs={
-        "model_name": f"notechat-{pipeline_run_id_param.to_string()}",
+        "model_name": "notechat-model",
         "image_uri": image_uri,
         "model_data": training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
         "role": role,
-        "endpoint_name": f"notechat-endpoint-{pipeline_run_id_param.to_string()}",
+        "endpoint_name": "notechat-model-endpoint",
         "instance_type": deployment_instance_type
     },
     outputs=[
