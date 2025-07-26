@@ -70,13 +70,13 @@ preprocessing_processor = ScriptProcessor(
 )
 
 preprocessing_step = ProcessingStep(
-    name=f"{job_prefix_name}-{env_param}-DataPreProcessing",
+    name=f"{job_prefix_name.to_string()}-{env_param.to_string()}-DataPreProcessing",
     processor=preprocessing_processor,
     code="scripts/preprocessing.py",
     source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
-        "--config-name", f"config.{env_param}"
+        "--config-name", f"config.{env_param.to_string()}"
     ],
     inputs=[
         ProcessingInput(
@@ -87,7 +87,7 @@ preprocessing_step = ProcessingStep(
     ],
     outputs=[
         ProcessingOutput(
-            source=f"/opt/ml/processing/output/preprocessed-{env_param}",
+            source=f"/opt/ml/processing/output/preprocessed-{env_param.to_string()}",
             destination=preprocessed_data_output_uri,
             output_name="training-data"
         )
@@ -109,24 +109,24 @@ training_processor = ScriptProcessor(
 )
 
 training_step = ProcessingStep(
-    name=f"{job_prefix_name}-{env_param}-TrainModel",
+    name=f"{job_prefix_name.to_string()}-{env_param.to_string()}-TrainModel",
     processor=training_processor,
     code="scripts/train.py",
     source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
-        "--config-name", f"config.{env_param}"
+        "--config-name", f"config.{env_param.to_string()}"
     ],
     inputs=[
         ProcessingInput(
             source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
-            destination=f"/opt/ml/processing/input/preprocessed-{env_param}",
+            destination=f"/opt/ml/processing/input/preprocessed-{env_param.to_string()}",
             input_name="training-data"
         )
     ],
     outputs=[
         ProcessingOutput(
-            source=f"/opt/ml/processing/output/model-artifacts-{env_param}",
+            source=f"/opt/ml/processing/output/model-artifacts-{env_param.to_string()}",
             destination=training_artifacts_output_uri,
             output_name="model-artifacts"
         )
@@ -161,12 +161,12 @@ evaluation_step = ProcessingStep(
     source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
-        "--config-name", f"config.{env_param}"
+        "--config-name", f"config.{env_param.to_string()}"
     ],
     inputs=[
         ProcessingInput(
             source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-            destination=f"/opt/ml/processing/input/model-artifacts-{env_param}",
+            destination=f"/opt/ml/processing/input/model-artifacts-{env_param.to_string()}",
             input_name="model-artifacts"
         )
     ],
@@ -198,7 +198,7 @@ register_model_step = ModelStep(
         transform_instances=[deployment_instance_type],
         model_package_group_name=model_package_group_name,
         approval_status="Approved",
-        description=f"Registered by pipeline run {pipeline_run_id_param}",
+        description=f"Registered by pipeline run {pipeline_run_id_param.to_string()}",
     ),
 )
 
@@ -206,11 +206,11 @@ deploy_model_step = LambdaStep(
     name="DeployNoteChatModel",
     lambda_func=Lambda(session, function_arn=lambda_deployment_arn),
     inputs={
-        "model_name": f"notechat-{pipeline_run_id_param}",
+        "model_name": f"notechat-{pipeline_run_id_param.to_string()}",
         "image_uri": image_uri,
         "model_data": training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
         "role": role,
-        "endpoint_name": f"notechat-endpoint-{pipeline_run_id_param}",
+        "endpoint_name": f"notechat-endpoint-{pipeline_run_id_param.to_string()}",
         "instance_type": deployment_instance_type
     },
     outputs=[
