@@ -2,7 +2,7 @@ from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOut
 from sagemaker.workflow.steps import ProcessingStep
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.pipeline_context import PipelineSession
-from sagemaker.workflow.parameters import ParameterString
+from sagemaker.workflow.parameters import ParameterString, ParameterInteger
 from sagemaker.workflow.properties import PropertyFile
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
@@ -26,11 +26,11 @@ wandb_api_key = ParameterString(name="WandbApiKey", default_value="")
 open_ai_key = ParameterString(name="OpenAIApiKey", default_value="")
 image_uri = ParameterString(name="ImageURI", default_value="")
 preprocessing_instance_type = ParameterString(name="PreprocessingInstanceType", default_value="ml.m5.large")
-preprocessing_instance_count = ParameterString(name="PreprocessingInstanceCount", default_value=1)
+preprocessing_instance_count = ParameterInteger(name="PreprocessingInstanceCount", default_value=1)
 training_instance_type = ParameterString(name="TrainingInstanceType", default_value="ml.m5.large")
-training_instance_count = ParameterString(name="TrainingInstanceCount", default_value=1)
+training_instance_count = ParameterInteger(name="TrainingInstanceCount", default_value=1)
 evaluation_instance_type = ParameterString(name="EvaluationInstanceType", default_value="ml.m5.large")
-evaluation_instance_count = ParameterString(name="EvaluationInstanceCount", default_value=1)
+evaluation_instance_count = ParameterInteger(name="EvaluationInstanceCount", default_value=1)
 deployment_instance_type = ParameterString(name="DeploymentInstanceType", default_value="ml.m5.large")
 
 preprocessed_data_output_uri = ParameterString(
