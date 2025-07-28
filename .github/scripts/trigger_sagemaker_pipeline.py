@@ -34,7 +34,7 @@ def main():
         parameters={
             "PipelineRunID": pipeline_run_uuid,
             "ImageURI": args.image_uri,
-            "RoleARN": args.role_arn,
+            # "RoleARN": args.role_arn,
             # "JobPrefixName": "Text2Cypher",
             "Environment": args.env,
             "WandbApiKey": args.wandb_api_key,
