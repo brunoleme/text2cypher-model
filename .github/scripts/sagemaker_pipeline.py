@@ -18,7 +18,6 @@ def create_pipeline(role_arn: str) -> Pipeline:
     # Parameters
     pipeline_run_id_param = ParameterString(name="PipelineRunID", default_value="no-pipeline-id")
     source_data_folder_uri = ParameterString(name="InputDataFolderURI", default_value="s3://bl-portfolio-ml-sagemaker-source-data/notechat-dataset/")
-    role = ParameterString(name="RoleARN", default_value="")
     job_prefix_name = ParameterString(name="JobPrefixName", default_value="Project")
     env_param = ParameterString(name="Environment", default_value="dev")
     wandb_api_key = ParameterString(name="WandbApiKey", default_value="")
@@ -167,7 +166,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
             "model_name": "notechat-model",
             "image_uri": image_uri,
             "model_data": training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-            "role": role,
+            "role": role_arn,
             "endpoint_name": "notechat-model-endpoint",
             "instance_type": deployment_instance_type
         },
@@ -200,7 +199,6 @@ def create_pipeline(role_arn: str) -> Pipeline:
             evaluation_input_local_folder,
             evaluation_report_path,
             pipeline_run_id_param,
-            role,
             job_prefix_name,
             env_param,
             wandb_api_key,
