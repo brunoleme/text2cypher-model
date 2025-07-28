@@ -191,8 +191,13 @@ def create_pipeline(role_arn: str) -> Pipeline:
         parameters=[
             source_data_folder_uri,
             preprocessed_data_output_uri,
+            preprocessed_data_output_local_folder,
             training_artifacts_output_uri,
+            training_input_local_folder,
+            training_output_local_folder,
             evaluation_reports_output_uri,
+            evaluation_input_local_folder,
+            evaluation_report_path,
             pipeline_run_id_param,
             role,
             job_prefix_name,
