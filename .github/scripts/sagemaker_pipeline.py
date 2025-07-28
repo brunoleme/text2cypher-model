@@ -40,7 +40,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
     training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts-dev")
     evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
     evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts-dev")
-    evaluation_report_path = ParameterString("EvaluationOutputPath", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports/eval_metrics.json")
+    evaluation_report_path = ParameterString("EvaluationOutputPath", default_value="/opt/ml/processing/output/reports/eval_metrics.json")
 
     # Preprocessing
     preprocessing_processor = ScriptProcessor(
@@ -159,22 +159,22 @@ def create_pipeline(role_arn: str) -> Pipeline:
         ),
     )
 
-    deploy_model_step = LambdaStep(
-        name="DeployNoteChatModel",
-        lambda_func=Lambda(function_arn=lambda_deployment_arn, session=session),
-        inputs={
-            "model_name": "notechat-model",
-            "image_uri": image_uri,
-            "model_data": training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-            "role": role_arn,
-            "endpoint_name": "notechat-model-endpoint",
-            "instance_type": deployment_instance_type
-        },
-        outputs=[
-            LambdaOutput(output_name="status"),
-            LambdaOutput(output_name="endpoint_name")
-        ],
-    )
+    # deploy_model_step = LambdaStep(
+    #     name="DeployNoteChatModel",
+    #     lambda_func=Lambda(function_arn=lambda_deployment_arn, session=session),
+    #     inputs={
+    #         "model_name": "notechat-model",
+    #         "image_uri": image_uri,
+    #         "model_data": training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+    #         "role": role_arn,
+    #         "endpoint_name": "notechat-model-endpoint",
+    #         "instance_type": deployment_instance_type
+    #     },
+    #     outputs=[
+    #         LambdaOutput(output_name="status"),
+    #         LambdaOutput(output_name="endpoint_name")
+    #     ],
+    # )
 
     condition_step = ConditionStep(
         name="CheckValLossCondition",
@@ -182,7 +182,8 @@ def create_pipeline(role_arn: str) -> Pipeline:
             left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="val_loss"),
             right=2.0,
         )],
-        if_steps=[register_model_step, deploy_model_step],
+        # if_steps=[register_model_step, deploy_model_step],
+        if_steps=[register_model_step],
         else_steps=[],
     )
 
@@ -212,7 +213,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
             evaluation_instance_count,
             deployment_instance_type,
             project_config,
-            lambda_deployment_arn,
+            # lambda_deployment_arn,
         ],
         steps=[preprocessing_step, training_step, evaluation_step, condition_step],
     )
