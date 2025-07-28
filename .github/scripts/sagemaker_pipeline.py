@@ -10,7 +10,7 @@ from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
 from sagemaker.model import Model
 from sagemaker.workflow.lambda_step import LambdaStep
-from sagemaker.workflow.lambda_step import LambdaOutput
+from sagemaker.workflow.lambda_step import LambdaOutput, LambdaOutputType
 from sagemaker.lambda_helper import Lambda
 
 
@@ -240,8 +240,8 @@ deploy_model_step = LambdaStep(
         "instance_type": deployment_instance_type
     },
     outputs=[
-        LambdaOutput(output_name="status", output_type="String"),
-        LambdaOutput(output_name="endpoint_name", output_type="String")
+        LambdaOutput(output_name="status", output_type=LambdaOutputType.String),
+        LambdaOutput(output_name="endpoint_name", output_type=LambdaOutputType.String)
     ],
 )
 
@@ -283,9 +283,7 @@ pipeline = Pipeline(
         evaluation_instance_type,
         evaluation_instance_count,
         deployment_instance_type,
++       lambda_deployment_arn,
     ],
     steps=[preprocessing_step, training_step, evaluation_step, condition_step],
 )
-
-
-pipeline.upsert(role_arn=role)
