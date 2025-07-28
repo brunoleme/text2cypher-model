@@ -212,6 +212,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
             evaluation_instance_type,
             evaluation_instance_count,
             deployment_instance_type,
+            project_config,
             lambda_deployment_arn,
         ],
         steps=[preprocessing_step, training_step, evaluation_step, condition_step],
