@@ -18,29 +18,29 @@ def create_pipeline(role_arn: str) -> Pipeline:
     # Parameters
     pipeline_run_id_param = ParameterString(name="PipelineRunID", default_value="no-pipeline-id")
     source_data_folder_uri = ParameterString(name="InputDataFolderURI", default_value="s3://bl-portfolio-ml-sagemaker-source-data/notechat-dataset/")
-    job_prefix_name = ParameterString(name="JobPrefixName", default_value="Project")
+    # job_prefix_name = ParameterString(name="JobPrefixName", default_value="Project")
     env_param = ParameterString(name="Environment", default_value="dev")
     wandb_api_key = ParameterString(name="WandbApiKey", default_value="")
-    open_ai_key = ParameterString(name="OpenAIApiKey", default_value="")
+    # open_ai_key = ParameterString(name="OpenAIApiKey", default_value="")
     image_uri = ParameterString(name="ImageURI", default_value="")
     preprocessing_instance_type = ParameterString(name="PreprocessingInstanceType", default_value="ml.m5.large")
     preprocessing_instance_count = ParameterInteger(name="PreprocessingInstanceCount", default_value=1)
-    training_instance_type = ParameterString(name="TrainingInstanceType", default_value="ml.m5.large")
-    training_instance_count = ParameterInteger(name="TrainingInstanceCount", default_value=1)
-    evaluation_instance_type = ParameterString(name="EvaluationInstanceType", default_value="ml.m5.large")
-    evaluation_instance_count = ParameterInteger(name="EvaluationInstanceCount", default_value=1)
-    deployment_instance_type = ParameterString(name="DeploymentInstanceType", default_value="ml.m5.large")
-    lambda_deployment_arn = ParameterString(name="LambdaDeploymentARN", default_value="")
+    # training_instance_type = ParameterString(name="TrainingInstanceType", default_value="ml.m5.large")
+    # training_instance_count = ParameterInteger(name="TrainingInstanceCount", default_value=1)
+    # evaluation_instance_type = ParameterString(name="EvaluationInstanceType", default_value="ml.m5.large")
+    # evaluation_instance_count = ParameterInteger(name="EvaluationInstanceCount", default_value=1)
+    # deployment_instance_type = ParameterString(name="DeploymentInstanceType", default_value="ml.m5.large")
+    # lambda_deployment_arn = ParameterString(name="LambdaDeploymentARN", default_value="")
     project_config = ParameterString(name="ProjectConfig", default_value="config.dev")
 
     preprocessed_data_output_uri = ParameterString("PreprocessedOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed")
     preprocessed_data_output_local_folder = ParameterString("PreprocessedOutputLocalFolder", default_value="/opt/ml/processing/output/preprocessed-dev")
-    training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
-    training_input_local_folder = ParameterString("TrainingInputLocalFolder", default_value="/opt/ml/processing/input/preprocessed-dev")
-    training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts-dev")
-    evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
-    evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts-dev")
-    evaluation_report_path = ParameterString("EvaluationOutputPath", default_value="/opt/ml/processing/output/reports/eval_metrics.json")
+    # training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
+    # training_input_local_folder = ParameterString("TrainingInputLocalFolder", default_value="/opt/ml/processing/input/preprocessed-dev")
+    # training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts-dev")
+    # evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
+    # evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts-dev")
+    # evaluation_report_path = ParameterString("EvaluationOutputPath", default_value="/opt/ml/processing/output/reports/eval_metrics.json")
 
     # Preprocessing
     preprocessing_processor = ScriptProcessor(
@@ -69,95 +69,95 @@ def create_pipeline(role_arn: str) -> Pipeline:
         outputs=[ProcessingOutput(source=preprocessed_data_output_local_folder, destination=preprocessed_data_output_uri, output_name="training-data")]
     )
 
-    # Training
-    training_processor = ScriptProcessor(
-        image_uri=image_uri,
-        command=["python3"],
-        role=role_arn,
-        instance_count=training_instance_count,
-        instance_type=training_instance_type,
-        volume_size_in_gb=30,
-        env={
-            "ENV": env_param,
-            "WANDB_API_KEY": wandb_api_key,
-            "PIPELINE_RUN_ID": pipeline_run_id_param,
-        },
-    )
+    # # Training
+    # training_processor = ScriptProcessor(
+    #     image_uri=image_uri,
+    #     command=["python3"],
+    #     role=role_arn,
+    #     instance_count=training_instance_count,
+    #     instance_type=training_instance_type,
+    #     volume_size_in_gb=30,
+    #     env={
+    #         "ENV": env_param,
+    #         "WANDB_API_KEY": wandb_api_key,
+    #         "PIPELINE_RUN_ID": pipeline_run_id_param,
+    #     },
+    # )
 
-    training_step = ProcessingStep(
-        name="ModelTraining",
-        processor=training_processor,
-        code="scripts/train.py",
-        job_arguments=[
-            "--config-path", "src/text2cypher/finetuning/config",
-            "--config-name", project_config
-        ],
-        inputs=[ProcessingInput(
-            source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
-            destination=training_input_local_folder,
-            input_name="training-data"
-        )],
-        outputs=[ProcessingOutput(source=training_output_local_folder, destination=training_artifacts_output_uri, output_name="model-artifacts")]
-    )
+    # training_step = ProcessingStep(
+    #     name="ModelTraining",
+    #     processor=training_processor,
+    #     code="scripts/train.py",
+    #     job_arguments=[
+    #         "--config-path", "src/text2cypher/finetuning/config",
+    #         "--config-name", project_config
+    #     ],
+    #     inputs=[ProcessingInput(
+    #         source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
+    #         destination=training_input_local_folder,
+    #         input_name="training-data"
+    #     )],
+    #     outputs=[ProcessingOutput(source=training_output_local_folder, destination=training_artifacts_output_uri, output_name="model-artifacts")]
+    # )
 
-    # Evaluation
-    evaluation_processor = ScriptProcessor(
-        image_uri=image_uri,
-        command=["python3"],
-        role=role_arn,
-        instance_count=evaluation_instance_count,
-        instance_type=evaluation_instance_type,
-        volume_size_in_gb=30,
-        env={
-            "ENV": env_param,
-            "WANDB_API_KEY": wandb_api_key,
-            "OPENAI_API_KEY": open_ai_key,
-            "PIPELINE_RUN_ID": pipeline_run_id_param,
-        },
-    )
+    # # Evaluation
+    # evaluation_processor = ScriptProcessor(
+    #     image_uri=image_uri,
+    #     command=["python3"],
+    #     role=role_arn,
+    #     instance_count=evaluation_instance_count,
+    #     instance_type=evaluation_instance_type,
+    #     volume_size_in_gb=30,
+    #     env={
+    #         "ENV": env_param,
+    #         "WANDB_API_KEY": wandb_api_key,
+    #         "OPENAI_API_KEY": open_ai_key,
+    #         "PIPELINE_RUN_ID": pipeline_run_id_param,
+    #     },
+    # )
 
-    evaluation_report = PropertyFile(name="EvaluationReport", output_name="evaluation-metrics", path=evaluation_report_path)
+    # evaluation_report = PropertyFile(name="EvaluationReport", output_name="evaluation-metrics", path=evaluation_report_path)
 
-    evaluation_step = ProcessingStep(
-        name="ModelEvaluation",
-        processor=evaluation_processor,
-        code="scripts/evaluate_model.py",
-        job_arguments=[
-            "--config-path", "src/text2cypher/finetuning/config",
-            "--config-name", project_config
-        ],
-        inputs=[ProcessingInput(
-            source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-            destination=evaluation_input_local_folder,
-            input_name="model-artifacts"
-        )],
-        outputs=[ProcessingOutput(
-            source="/opt/ml/processing/output/reports",
-            destination=evaluation_reports_output_uri,
-            output_name="evaluation-metrics",
-        )],
-        property_files=[evaluation_report],
-    )
+    # evaluation_step = ProcessingStep(
+    #     name="ModelEvaluation",
+    #     processor=evaluation_processor,
+    #     code="scripts/evaluate_model.py",
+    #     job_arguments=[
+    #         "--config-path", "src/text2cypher/finetuning/config",
+    #         "--config-name", project_config
+    #     ],
+    #     inputs=[ProcessingInput(
+    #         source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+    #         destination=evaluation_input_local_folder,
+    #         input_name="model-artifacts"
+    #     )],
+    #     outputs=[ProcessingOutput(
+    #         source="/opt/ml/processing/output/reports",
+    #         destination=evaluation_reports_output_uri,
+    #         output_name="evaluation-metrics",
+    #     )],
+    #     property_files=[evaluation_report],
+    # )
 
-    model = Model(
-        image_uri=image_uri,
-        model_data=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-        role=role_arn,
-        sagemaker_session=session,
-    )
+    # model = Model(
+    #     image_uri=image_uri,
+    #     model_data=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+    #     role=role_arn,
+    #     sagemaker_session=session,
+    # )
 
-    register_model_step = ModelStep(
-        name="RegisterNoteChatModel",
-        step_args=model.register(
-            content_types=["application/json"],
-            response_types=["application/json"],
-            inference_instances=[deployment_instance_type],
-            transform_instances=[deployment_instance_type],
-            model_package_group_name="NoteChatModel",
-            approval_status="Approved",
-            description="Registered model for notechat generation",
-        ),
-    )
+    # register_model_step = ModelStep(
+    #     name="RegisterNoteChatModel",
+    #     step_args=model.register(
+    #         content_types=["application/json"],
+    #         response_types=["application/json"],
+    #         inference_instances=[deployment_instance_type],
+    #         transform_instances=[deployment_instance_type],
+    #         model_package_group_name="NoteChatModel",
+    #         approval_status="Approved",
+    #         description="Registered model for notechat generation",
+    #     ),
+    # )
 
     # deploy_model_step = LambdaStep(
     #     name="DeployNoteChatModel",
@@ -176,16 +176,16 @@ def create_pipeline(role_arn: str) -> Pipeline:
     #     ],
     # )
 
-    condition_step = ConditionStep(
-        name="CheckValLossCondition",
-        conditions=[ConditionLessThanOrEqualTo(
-            left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="val_loss"),
-            right=2.0,
-        )],
-        # if_steps=[register_model_step, deploy_model_step],
-        if_steps=[register_model_step],
-        else_steps=[],
-    )
+    # condition_step = ConditionStep(
+    #     name="CheckValLossCondition",
+    #     conditions=[ConditionLessThanOrEqualTo(
+    #         left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="val_loss"),
+    #         right=2.0,
+    #     )],
+    #     # if_steps=[register_model_step, deploy_model_step],
+    #     if_steps=[register_model_step],
+    #     else_steps=[],
+    # )
 
     return Pipeline(
         name="NoteChatPipeline",
@@ -193,27 +193,30 @@ def create_pipeline(role_arn: str) -> Pipeline:
             source_data_folder_uri,
             preprocessed_data_output_uri,
             preprocessed_data_output_local_folder,
-            training_artifacts_output_uri,
-            training_input_local_folder,
-            training_output_local_folder,
-            evaluation_reports_output_uri,
-            evaluation_input_local_folder,
-            evaluation_report_path,
+            # training_artifacts_output_uri,
+            # training_input_local_folder,
+            # training_output_local_folder,
+            # evaluation_reports_output_uri,
+            # evaluation_input_local_folder,
+            # evaluation_report_path,
             pipeline_run_id_param,
-            job_prefix_name,
+            # job_prefix_name,
             env_param,
             wandb_api_key,
-            open_ai_key,
+            # open_ai_key,
             image_uri,
             preprocessing_instance_type,
             preprocessing_instance_count,
-            training_instance_type,
-            training_instance_count,
-            evaluation_instance_type,
-            evaluation_instance_count,
-            deployment_instance_type,
+            # training_instance_type,
+            # training_instance_count,
+            # evaluation_instance_type,
+            # evaluation_instance_count,
+            # deployment_instance_type,
             project_config,
             # lambda_deployment_arn,
         ],
-        steps=[preprocessing_step, training_step, evaluation_step, condition_step],
+        # steps=[preprocessing_step, training_step, evaluation_step, condition_step],
+        # steps=[preprocessing_step, training_step, evaluation_step],
+        # steps=[preprocessing_step, training_step],
+        steps=[preprocessing_step],
     )
