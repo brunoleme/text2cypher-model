@@ -1,6 +1,6 @@
 import argparse
 import uuid
-from sagemaker_pipeline import pipeline
+from sagemaker_pipeline import create_pipeline
 
 
 def parse_args():
@@ -27,6 +27,7 @@ def main():
 
     pipeline_run_uuid = str(uuid.uuid4())
 
+    pipeline = create_pipeline(role_arn=args.role_arn)
     pipeline.upsert(role_arn=args.role_arn)
 
     execution = pipeline.start(
