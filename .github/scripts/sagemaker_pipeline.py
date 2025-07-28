@@ -230,7 +230,7 @@ register_model_step = ModelStep(
 
 deploy_model_step = LambdaStep(
     name="DeployNoteChatModel",
-    lambda_func=Lambda(session, function_arn=lambda_deployment_arn),
+    lambda_func=Lambda(function_arn=lambda_deployment_arn, session=session),
     inputs={
         "model_name": "notechat-model",
         "image_uri": image_uri,
