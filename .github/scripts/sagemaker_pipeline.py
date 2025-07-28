@@ -9,7 +9,7 @@ from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
 from sagemaker.model import Model
-from sagemaker.workflow.lambda_step import LambdaStep, LambdaOutput, LambdaOutputType
+from sagemaker.workflow.lambda_step import LambdaStep, LambdaOutput
 from sagemaker.lambda_helper import Lambda
 
 def create_pipeline(role_arn: str) -> Pipeline:
@@ -171,8 +171,8 @@ def create_pipeline(role_arn: str) -> Pipeline:
             "instance_type": deployment_instance_type
         },
         outputs=[
-            LambdaOutput(output_name="status", output_type=LambdaOutputType.String),
-            LambdaOutput(output_name="endpoint_name", output_type=LambdaOutputType.String)
+            LambdaOutput(output_name="status"),
+            LambdaOutput(output_name="endpoint_name")
         ],
     )
 
