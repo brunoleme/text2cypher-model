@@ -25,8 +25,8 @@ def create_pipeline(role_arn: str) -> Pipeline:
     image_uri = ParameterString(name="ImageURI", default_value="")
     preprocessing_instance_type = ParameterString(name="PreprocessingInstanceType", default_value="ml.m5.large")
     preprocessing_instance_count = ParameterInteger(name="PreprocessingInstanceCount", default_value=1)
-    # training_instance_type = ParameterString(name="TrainingInstanceType", default_value="ml.m5.large")
-    # training_instance_count = ParameterInteger(name="TrainingInstanceCount", default_value=1)
+    training_instance_type = ParameterString(name="TrainingInstanceType", default_value="ml.m5.large")
+    training_instance_count = ParameterInteger(name="TrainingInstanceCount", default_value=1)
     # evaluation_instance_type = ParameterString(name="EvaluationInstanceType", default_value="ml.m5.large")
     # evaluation_instance_count = ParameterInteger(name="EvaluationInstanceCount", default_value=1)
     # deployment_instance_type = ParameterString(name="DeploymentInstanceType", default_value="ml.m5.large")
@@ -35,9 +35,9 @@ def create_pipeline(role_arn: str) -> Pipeline:
 
     preprocessed_data_output_uri = ParameterString("PreprocessedOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed")
     preprocessed_data_output_local_folder = ParameterString("PreprocessedOutputLocalFolder", default_value="/opt/ml/processing/output/preprocessed-dev")
-    # training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
-    # training_input_local_folder = ParameterString("TrainingInputLocalFolder", default_value="/opt/ml/processing/input/preprocessed-dev")
-    # training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts-dev")
+    training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
+    training_input_local_folder = ParameterString("TrainingInputLocalFolder", default_value="/opt/ml/processing/input/preprocessed-dev")
+    training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts-dev")
     # evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
     # evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts-dev")
     # evaluation_report_path = ParameterString("EvaluationOutputPath", default_value="/opt/ml/processing/output/reports/eval_metrics.json")
@@ -69,36 +69,36 @@ def create_pipeline(role_arn: str) -> Pipeline:
         outputs=[ProcessingOutput(source=preprocessed_data_output_local_folder, destination=preprocessed_data_output_uri, output_name="training-data")]
     )
 
-    # # Training
-    # training_processor = ScriptProcessor(
-    #     image_uri=image_uri,
-    #     command=["python3"],
-    #     role=role_arn,
-    #     instance_count=training_instance_count,
-    #     instance_type=training_instance_type,
-    #     volume_size_in_gb=30,
-    #     env={
-    #         "ENV": env_param,
-    #         "WANDB_API_KEY": wandb_api_key,
-    #         "PIPELINE_RUN_ID": pipeline_run_id_param,
-    #     },
-    # )
+    # Training
+    training_processor = ScriptProcessor(
+        image_uri=image_uri,
+        command=["python3"],
+        role=role_arn,
+        instance_count=training_instance_count,
+        instance_type=training_instance_type,
+        volume_size_in_gb=30,
+        env={
+            "ENV": env_param,
+            "WANDB_API_KEY": wandb_api_key,
+            "PIPELINE_RUN_ID": pipeline_run_id_param,
+        },
+    )
 
-    # training_step = ProcessingStep(
-    #     name="ModelTraining",
-    #     processor=training_processor,
-    #     code="scripts/train.py",
-    #     job_arguments=[
-    #         "--config-path", "src/text2cypher/finetuning/config",
-    #         "--config-name", project_config
-    #     ],
-    #     inputs=[ProcessingInput(
-    #         source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
-    #         destination=training_input_local_folder,
-    #         input_name="training-data"
-    #     )],
-    #     outputs=[ProcessingOutput(source=training_output_local_folder, destination=training_artifacts_output_uri, output_name="model-artifacts")]
-    # )
+    training_step = ProcessingStep(
+        name="ModelTraining",
+        processor=training_processor,
+        code="scripts/train.py",
+        job_arguments=[
+            "--config-path", "src/text2cypher/finetuning/config",
+            "--config-name", project_config
+        ],
+        inputs=[ProcessingInput(
+            source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
+            destination=training_input_local_folder,
+            input_name="training-data"
+        )],
+        outputs=[ProcessingOutput(source=training_output_local_folder, destination=training_artifacts_output_uri, output_name="model-artifacts")]
+    )
 
     # # Evaluation
     # evaluation_processor = ScriptProcessor(
@@ -193,9 +193,9 @@ def create_pipeline(role_arn: str) -> Pipeline:
             source_data_folder_uri,
             preprocessed_data_output_uri,
             preprocessed_data_output_local_folder,
-            # training_artifacts_output_uri,
-            # training_input_local_folder,
-            # training_output_local_folder,
+            training_artifacts_output_uri,
+            training_input_local_folder,
+            training_output_local_folder,
             # evaluation_reports_output_uri,
             # evaluation_input_local_folder,
             # evaluation_report_path,
@@ -207,8 +207,8 @@ def create_pipeline(role_arn: str) -> Pipeline:
             image_uri,
             preprocessing_instance_type,
             preprocessing_instance_count,
-            # training_instance_type,
-            # training_instance_count,
+            training_instance_type,
+            training_instance_count,
             # evaluation_instance_type,
             # evaluation_instance_count,
             # deployment_instance_type,
@@ -217,6 +217,6 @@ def create_pipeline(role_arn: str) -> Pipeline:
         ],
         # steps=[preprocessing_step, training_step, evaluation_step, condition_step],
         # steps=[preprocessing_step, training_step, evaluation_step],
-        # steps=[preprocessing_step, training_step],
-        steps=[preprocessing_step],
+        steps=[preprocessing_step, training_step],
+        # steps=[preprocessing_step],
     )
