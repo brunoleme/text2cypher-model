@@ -137,6 +137,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
             destination=evaluation_reports_output_uri,
             output_name="evaluation-metrics",
         )],
+        property_files=[evaluation_report],
     )
 
     model = Model(
