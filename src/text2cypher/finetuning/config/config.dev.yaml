@@ -39,7 +39,7 @@ data:
   test_split: 0.25
   shuffle_buffer_size: 5000
   source_data_folder: "/opt/ml/processing/input/source-data"
-  source_data_path: "notechat-dataset/notechat_dataset.csv"
+  source_data_path: "notechat_dataset.csv"
   preprocessed_output_data_folder: "/opt/ml/processing/output"
   preprocessed_input_data_folder: "/opt/ml/processing/input"
 
