@@ -43,7 +43,6 @@ def main():
             "PreprocessedOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/input/preprocessed",
             "TrainingOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts",
             "EvaluationOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/reports",
-            "EvaluationOutputPath": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/reports/{pipeline_run_uuid}_eval_metrics.json",
             "PreprocessingInstanceType": args.preprocessing_instance_type,
             "PreprocessingInstanceCount": args.preprocessing_instance_count,
             "TrainingInstanceType": args.training_instance_type,
