@@ -99,7 +99,7 @@ preprocessing_step = ProcessingStep(
     name="DataPreProcessing",
     processor=preprocessing_processor,
     code="scripts/preprocessing.py",
-    source_dir=".",
+    # source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
         "--config-name", project_config
@@ -138,7 +138,7 @@ training_step = ProcessingStep(
     name="ModelTraining",
     processor=training_processor,
     code="scripts/train.py",
-    source_dir=".",
+    # source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
         "--config-name", project_config
@@ -184,7 +184,7 @@ evaluation_step = ProcessingStep(
     name="ModelEvaluation",
     processor=evaluation_processor,
     code="scripts/evaluate_model.py",
-    source_dir=".",
+    # source_dir=".",
     job_arguments=[
         "--config-path", "src/text2cypher/finetuning/config",
         "--config-name", project_config
