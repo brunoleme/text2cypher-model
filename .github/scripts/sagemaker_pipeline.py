@@ -203,6 +203,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
             training_artifacts_output_uri,
             evaluation_reports_output_uri,
             evaluation_input_local_folder,
+            evaluation_report_path,
             pipeline_run_id_param,
             # job_prefix_name,
             env_param,
