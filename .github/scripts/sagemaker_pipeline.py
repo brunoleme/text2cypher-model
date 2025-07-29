@@ -37,6 +37,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
     training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
     evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
     evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts")
+    evaluation_report_path = ParameterString("EvaluationReportPath", default_value="eval_metrics.json")
 
     # Preprocessing
     preprocessing_processor = ScriptProcessor(
@@ -115,7 +116,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
     evaluation_report = PropertyFile(
         name="EvaluationReport",
         output_name="evaluation-metrics",
-        path="eval_metrics.json"
+        path=evaluation_report_path
     )
 
     evaluation_step = ProcessingStep(

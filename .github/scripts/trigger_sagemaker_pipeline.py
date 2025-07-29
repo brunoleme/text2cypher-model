@@ -49,6 +49,7 @@ def main():
             "TrainingInstanceCount": args.training_instance_count,
             "EvaluationInstanceType": args.evaluation_instance_type,
             "EvaluationInstanceCount": args.evaluation_instance_count,
+            "EvaluationReportPath": f"{pipeline_run_uuid}_eval_metrics.json",
             # "DeploymentInstanceType": args.deployment_instance_type,
             # "LambdaDeploymentARN": args.lambda_deployment_arn
         }
