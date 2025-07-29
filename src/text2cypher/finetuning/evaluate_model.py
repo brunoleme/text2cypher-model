@@ -72,7 +72,7 @@ def evaluate_model(cfg: DictConfig):
 
         logger.info("Loading model from checkpoint")
 
-        model_ckpt = f"{cfg.training.model_artifact_dir}/{pipeline_run_id}_best_model.ckpt"
+        model_ckpt = f"{cfg.evaluation.model_artifact_dir}/{pipeline_run_id}_best_model.ckpt"
 
         model_name = cfg.model.name
         model_type = cfg.model.type

@@ -45,6 +45,7 @@ data:
 
 evaluation:
   reports_dir: "/opt/ml/processing/output/reports-dev"
+  model_artifact_dir: "/opt/ml/processing/input/model-artifacts-dev"
   test_samples_lexical_metrics: 16
   test_samples_semantic_metrics: 16
   test_samples_ai_as_judge_metrics: 8
