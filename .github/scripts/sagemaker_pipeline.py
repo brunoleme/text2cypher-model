@@ -129,11 +129,18 @@ def create_pipeline(role_arn: str) -> Pipeline:
             "--config-path", "src/text2cypher/finetuning/config",
             "--config-name", project_config
         ],
-        inputs=[ProcessingInput(
-            source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-            destination=evaluation_input_local_folder,
-            input_name="model-artifacts"
-        )],
+        inputs=[
+            ProcessingInput(
+                source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
+                destination=training_input_local_folder,
+                input_name="training-data"
+            ),
+            ProcessingInput(
+                source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+                destination=evaluation_input_local_folder,
+                input_name="model-artifacts"
+            )
+        ],
         outputs=[ProcessingOutput(
             source="/opt/ml/processing/output/reports",
             destination=evaluation_reports_output_uri,
