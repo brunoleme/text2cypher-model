@@ -5,7 +5,7 @@ from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.workflow.parameters import ParameterString, ParameterInteger
 from sagemaker.workflow.properties import PropertyFile
 from sagemaker.workflow.model_step import ModelStep
-from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
+from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
 from sagemaker.model import Model
@@ -29,7 +29,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     training_instance_count = ParameterInteger(name="TrainingInstanceCount", default_value=1)
     evaluation_instance_type = ParameterString(name="EvaluationInstanceType", default_value="ml.m5.large")
     evaluation_instance_count = ParameterInteger(name="EvaluationInstanceCount", default_value=1)
-    # deployment_instance_type = ParameterString(name="DeploymentInstanceType", default_value="ml.m5.large")
+    deployment_instance_type = ParameterString(name="DeploymentInstanceType", default_value="ml.m5.large")
     # lambda_deployment_arn = ParameterString(name="LambdaDeploymentARN", default_value="")
     project_config = ParameterString(name="ProjectConfig", default_value="config.dev")
 
@@ -146,25 +146,25 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         property_files=[evaluation_report],
     )
 
-    # model = Model(
-    #     image_uri=image_uri,
-    #     model_data=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-    #     role=role_arn,
-    #     sagemaker_session=session,
-    # )
+    model = Model(
+        image_uri=image_uri,
+        model_data=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+        role=role_arn,
+        sagemaker_session=session,
+    )
 
-    # register_model_step = ModelStep(
-    #     name="RegisterNoteChatModel",
-    #     step_args=model.register(
-    #         content_types=["application/json"],
-    #         response_types=["application/json"],
-    #         inference_instances=[deployment_instance_type],
-    #         transform_instances=[deployment_instance_type],
-    #         model_package_group_name="NoteChatModel",
-    #         approval_status="Approved",
-    #         description="Registered model for notechat generation",
-    #     ),
-    # )
+    register_model_step = ModelStep(
+        name="RegisterNoteChatModel",
+        step_args=model.register(
+            content_types=["application/json"],
+            response_types=["application/json"],
+            inference_instances=[deployment_instance_type],
+            transform_instances=[deployment_instance_type],
+            model_package_group_name="NoteChatModel",
+            approval_status="Approved",
+            description="Registered model for notechat generation",
+        ),
+    )
 
     # deploy_model_step = LambdaStep(
     #     name="DeployNoteChatModel",
@@ -183,16 +183,16 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     #     ],
     # )
 
-    # condition_step = ConditionStep(
-    #     name="CheckValLossCondition",
-    #     conditions=[ConditionLessThanOrEqualTo(
-    #         left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="val_loss"),
-    #         right=2.0,
-    #     )],
-    #     # if_steps=[register_model_step, deploy_model_step],
-    #     if_steps=[register_model_step],
-    #     else_steps=[],
-    # )
+    condition_step = ConditionStep(
+        name="CheckBertScoreCondition",
+        conditions=[ConditionGreaterThanOrEqualTo(
+            left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="bert_score"),
+            right=0.8,
+        )],
+        # if_steps=[register_model_step, deploy_model_step],
+        if_steps=[register_model_step],
+        else_steps=[],
+    )
 
     return Pipeline(
         name="NoteChatPipeline",
@@ -214,12 +214,12 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             training_instance_count,
             evaluation_instance_type,
             evaluation_instance_count,
-            # deployment_instance_type,
+            deployment_instance_type,
             project_config,
             # lambda_deployment_arn,
         ],
-        # steps=[preprocessing_step, training_step, evaluation_step, condition_step],
-        steps=[preprocessing_step, training_step, evaluation_step],
+        steps=[preprocessing_step, training_step, evaluation_step, condition_step],
+        # steps=[preprocessing_step, training_step, evaluation_step],
         # steps=[preprocessing_step, training_step],
         # steps=[preprocessing_step],
     )
