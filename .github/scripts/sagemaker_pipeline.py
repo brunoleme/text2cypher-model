@@ -12,7 +12,7 @@ from sagemaker.model import Model
 from sagemaker.workflow.lambda_step import LambdaStep, LambdaOutput
 from sagemaker.lambda_helper import Lambda
 
-def create_pipeline(role_arn: str) -> Pipeline:
+def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     session = PipelineSession()
 
     # Parameters
@@ -37,7 +37,6 @@ def create_pipeline(role_arn: str) -> Pipeline:
     training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
     evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
     evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts")
-    evaluation_report_path = ParameterString("EvaluationReportPath", default_value="eval_metrics.json")
 
     # Preprocessing
     preprocessing_processor = ScriptProcessor(
@@ -116,7 +115,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
     evaluation_report = PropertyFile(
         name="EvaluationReport",
         output_name="evaluation-metrics",
-        path=evaluation_report_path
+        path=f"{pipeline_run_uuid}_eval_metrics.json"
     )
 
     evaluation_step = ProcessingStep(
@@ -203,7 +202,6 @@ def create_pipeline(role_arn: str) -> Pipeline:
             training_artifacts_output_uri,
             evaluation_reports_output_uri,
             evaluation_input_local_folder,
-            evaluation_report_path,
             pipeline_run_id_param,
             # job_prefix_name,
             env_param,
