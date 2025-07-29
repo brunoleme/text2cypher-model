@@ -34,10 +34,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
     project_config = ParameterString(name="ProjectConfig", default_value="config.dev")
 
     preprocessed_data_output_uri = ParameterString("PreprocessedOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed")
-    preprocessed_data_output_local_folder = ParameterString("PreprocessedOutputLocalFolder", default_value="/opt/ml/processing/output/preprocessed")
     training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
-    training_input_local_folder = ParameterString("TrainingInputLocalFolder", default_value="/opt/ml/processing/input/preprocessed")
-    training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts")
     evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
     evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts")
 
@@ -65,7 +62,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
             "--config-name", project_config
         ],
         inputs=[ProcessingInput(source=source_data_folder_uri, destination="/opt/ml/processing/input/source-data", input_name="source-data")],
-        outputs=[ProcessingOutput(source=preprocessed_data_output_local_folder, destination=preprocessed_data_output_uri, output_name="training-data")]
+        outputs=[ProcessingOutput(source="/opt/ml/processing/output/preprocessed", destination=preprocessed_data_output_uri, output_name="training-data")]
     )
 
     # Training
@@ -93,10 +90,10 @@ def create_pipeline(role_arn: str) -> Pipeline:
         ],
         inputs=[ProcessingInput(
             source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
-            destination=training_input_local_folder,
+            destination="/opt/ml/processing/input/preprocessed",
             input_name="training-data"
         )],
-        outputs=[ProcessingOutput(source=training_output_local_folder, destination=training_artifacts_output_uri, output_name="model-artifacts")]
+        outputs=[ProcessingOutput(source="/opt/ml/processing/output/model-artifacts", destination=training_artifacts_output_uri, output_name="model-artifacts")]
     )
 
     # Evaluation
@@ -118,7 +115,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
     evaluation_report = PropertyFile(
         name="EvaluationReport",
         output_name="evaluation-metrics",
-        path="/opt/ml/processing/output/reports/eval_metrics.json"
+        path="eval_metrics.json"
     )
 
     evaluation_step = ProcessingStep(
@@ -132,12 +129,12 @@ def create_pipeline(role_arn: str) -> Pipeline:
         inputs=[
             ProcessingInput(
                 source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
-                destination=training_input_local_folder,
+                destination="/opt/ml/processing/input/preprocessed",
                 input_name="training-data"
             ),
             ProcessingInput(
                 source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-                destination=evaluation_input_local_folder,
+                destination="/opt/ml/processing/input/model-artifacts",
                 input_name="model-artifacts"
             )
         ],
@@ -202,10 +199,7 @@ def create_pipeline(role_arn: str) -> Pipeline:
         parameters=[
             source_data_folder_uri,
             preprocessed_data_output_uri,
-            preprocessed_data_output_local_folder,
             training_artifacts_output_uri,
-            training_input_local_folder,
-            training_output_local_folder,
             evaluation_reports_output_uri,
             evaluation_input_local_folder,
             pipeline_run_id_param,
