@@ -34,12 +34,12 @@ def create_pipeline(role_arn: str) -> Pipeline:
     project_config = ParameterString(name="ProjectConfig", default_value="config.dev")
 
     preprocessed_data_output_uri = ParameterString("PreprocessedOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed")
-    preprocessed_data_output_local_folder = ParameterString("PreprocessedOutputLocalFolder", default_value="/opt/ml/processing/output/preprocessed-dev")
+    preprocessed_data_output_local_folder = ParameterString("PreprocessedOutputLocalFolder", default_value="/opt/ml/processing/output/preprocessed")
     training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
-    training_input_local_folder = ParameterString("TrainingInputLocalFolder", default_value="/opt/ml/processing/input/preprocessed-dev")
-    training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts-dev")
+    training_input_local_folder = ParameterString("TrainingInputLocalFolder", default_value="/opt/ml/processing/input/preprocessed")
+    training_output_local_folder = ParameterString("TrainingOutputLocalFolder", default_value="/opt/ml/processing/output/model-artifacts")
     evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
-    evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts-dev")
+    evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts")
 
     # Preprocessing
     preprocessing_processor = ScriptProcessor(

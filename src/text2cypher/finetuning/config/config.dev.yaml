@@ -25,7 +25,7 @@ training:
   gradient_clip_val: 1.0
   max_epochs: 5
   num_workers: 4
-  model_artifact_dir: "/opt/ml/processing/output/model-artifacts-dev"
+  model_artifact_dir: "/opt/ml/processing/output/model-artifacts"
   devices: "auto"
 
 data:
@@ -44,8 +44,8 @@ data:
   preprocessed_input_data_folder: "/opt/ml/processing/input"
 
 evaluation:
-  reports_dir: "/opt/ml/processing/output/reports-dev"
-  model_artifact_dir: "/opt/ml/processing/input/model-artifacts-dev"
+  reports_dir: "/opt/ml/processing/output/reports"
+  model_artifact_dir: "/opt/ml/processing/input/model-artifacts"
   test_samples_lexical_metrics: 16
   test_samples_semantic_metrics: 16
   test_samples_ai_as_judge_metrics: 8

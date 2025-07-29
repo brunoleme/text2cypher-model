@@ -209,7 +209,7 @@ class NoteChatDataPreprocessingModule():
         val_filename = filename.replace(".csv", "_val.parquet")
         test_filename = filename.replace(".csv", "_test.parquet")
 
-        output_folder = f"{self.preprocessed_output_data_folder}/preprocessed-{self.env_folder}"
+        output_folder = f"{self.preprocessed_output_data_folder}/preprocessed"
 
         train_data_dest_path = f"{output_folder}/{train_filename}"
         val_data_dest_path = f"{output_folder}/{val_filename}"
@@ -221,7 +221,7 @@ class NoteChatDataPreprocessingModule():
 
 
     def clean_output_folder(self):
-        output_folder = f"{self.preprocessed_output_data_folder}/preprocessed-{self.env_folder}"
+        output_folder = f"{self.preprocessed_output_data_folder}/preprocessed"
         for filename in os.listdir(output_folder):
             file_path = os.path.join(output_folder, filename)
             try:
