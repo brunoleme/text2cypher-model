@@ -27,7 +27,7 @@ def main():
 
     pipeline_run_uuid = str(uuid.uuid4())
 
-    pipeline = create_pipeline(role_arn=args.role_arn)
+    pipeline = create_pipeline(role_arn=args.role_arn, pipeline_run_uuid=pipeline_run_uuid)
     pipeline.upsert(role_arn=args.role_arn)
 
     execution = pipeline.start(
