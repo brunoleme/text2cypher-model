@@ -165,22 +165,22 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         ),
     )
 
-    deploy_model_step = LambdaStep(
-        name="DeployNoteChatModel",
-        lambda_func=Lambda(function_arn=lambda_deployment_arn, session=session),
-        inputs={
-            "model_name": "notechat-model",
-            "image_uri": image_uri,
-            "model_data": training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-            "role": role_arn,
-            "endpoint_name": "notechat-model-endpoint",
-            "instance_type": deployment_instance_type
-        },
-        outputs=[
-            LambdaOutput(output_name="status"),
-            LambdaOutput(output_name="endpoint_name")
-        ],
-    )
+    # deploy_model_step = LambdaStep(
+    #     name="DeployNoteChatModel",
+    #     lambda_func=Lambda(function_arn=lambda_deployment_arn, session=session),
+    #     inputs={
+    #         "model_name": "notechat-model",
+    #         "image_uri": image_uri,
+    #         "model_data": training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+    #         "role": role_arn,
+    #         "endpoint_name": "notechat-model-endpoint",
+    #         "instance_type": deployment_instance_type
+    #     },
+    #     outputs=[
+    #         LambdaOutput(output_name="status"),
+    #         LambdaOutput(output_name="endpoint_name")
+    #     ],
+    # )
 
     condition_step = ConditionStep(
         name="CheckBertScoreCondition",
