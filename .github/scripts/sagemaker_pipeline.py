@@ -182,9 +182,6 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         ],
     )
 
-    register_model_step.add_depends_on([evaluation_step])
-    deploy_model_step.add_depends_on([register_model_step])
-
     condition_step = ConditionStep(
         name="CheckBertScoreCondition",
         conditions=[ConditionGreaterThanOrEqualTo(
