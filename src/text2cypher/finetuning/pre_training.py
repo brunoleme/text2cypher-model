@@ -12,5 +12,5 @@ def pre_train(cfg: DictConfig):
     os.makedirs(os.path.join(root, "hf_model"), exist_ok=True)
     os.makedirs(os.path.join(root, "reports"), exist_ok=True)
     logger.info(f"Resolved root path: {root}")
-    logger.info(f"Contents of {cfg.training.model_artifact_dir}: {os.listdir(cfg.training.model_artifact_dir)}")   
+    logger.info(f"Contents of {root}: {os.listdir(root)}")   
     logger.info(f"Created artifact folders under: {root}")
