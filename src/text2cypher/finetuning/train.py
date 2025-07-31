@@ -53,8 +53,8 @@ def train(cfg: DictConfig):
 
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=cfg.training.model_artifact_dir,
-        filename=f"{pipeline_run_id}_best_model",
+        dirpath=os.path.join(cfg.training.model_artifact_dir, f"{pipeline_run_id}/checkpoints"),
+        filename=f"best_model",
         monitor="val_loss",
         mode="min",
         save_top_k=1,
@@ -85,11 +85,14 @@ def train(cfg: DictConfig):
     logger.info("Starting model training")
     trainer.fit(model, datamodule=datamodule)
     logger.success("Training completed successfully")
+
+    logger.info("Saving model in hf format")
+    hf_save_path = os.path.join(cfg.training.model_artifact_dir, f"{pipeline_run_id}/hf_model")
+    model.model.save_pretrained(hf_save_path)
+    model.tokenizer.save_pretrained(hf_save_path)
+    logger.success("Model saved successfully")
+
     wandb_logger.experiment.summary["best_val_loss"] = trainer.callback_metrics["val_loss"].item()
     wandb_logger.experiment.summary["best_epoch"] = trainer.current_epoch
     wandb_logger.experiment.summary["sagemaker_pipeline_run_id"] = pipeline_run_id
     wandb.finish()
-
-
-if __name__ == "__main__":
-    train()

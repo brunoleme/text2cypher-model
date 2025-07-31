@@ -44,7 +44,6 @@ data:
   preprocessed_input_data_folder: "/opt/ml/processing/input"
 
 evaluation:
-  reports_dir: "/opt/ml/processing/output/reports"
   model_artifact_dir: "/opt/ml/processing/input/model-artifacts"
   test_samples_lexical_metrics: 16
   test_samples_semantic_metrics: 16

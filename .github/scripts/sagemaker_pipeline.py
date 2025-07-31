@@ -35,8 +35,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
 
     preprocessed_data_output_uri = ParameterString("PreprocessedOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed")
     training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
-    evaluation_reports_output_uri = ParameterString("EvaluationOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/reports")
-    evaluation_input_local_folder = ParameterString("EvaluationInputLocalFolder", default_value="/opt/ml/processing/input/model-artifacts")
+    package_model_uri = ParameterString("PackagedModelS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
 
     # Preprocessing
     preprocessing_processor = ScriptProcessor(
@@ -115,7 +114,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     evaluation_report = PropertyFile(
         name="EvaluationReport",
         output_name="evaluation-metrics",
-        path=f"{pipeline_run_uuid}_eval_metrics.json"
+        path=f"{pipeline_run_uuid}/reports/eval_metrics.json"
     )
 
     evaluation_step = ProcessingStep(
@@ -140,7 +139,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         ],
         outputs=[ProcessingOutput(
             source="/opt/ml/processing/output/reports",
-            destination=evaluation_reports_output_uri,
+            destination=training_artifacts_output_uri,
             output_name="evaluation-metrics",
         )],
         property_files=[evaluation_report],
@@ -148,7 +147,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
 
     model = Model(
         image_uri=image_uri,
-        model_data=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+        model_data=package_model_uri,
         role=role_arn,
         sagemaker_session=session,
     )
@@ -200,8 +199,8 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             source_data_folder_uri,
             preprocessed_data_output_uri,
             training_artifacts_output_uri,
-            evaluation_reports_output_uri,
-            evaluation_input_local_folder,
+            package_model_uri,
+            # evaluation_input_local_folder,
             pipeline_run_id_param,
             # job_prefix_name,
             env_param,

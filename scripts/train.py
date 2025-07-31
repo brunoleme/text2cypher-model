@@ -2,6 +2,8 @@ import os
 import hydra
 from omegaconf import OmegaConf
 from text2cypher.finetuning.train import train
+from text2cypher.finetuning.pre_training import pre_train
+from text2cypher.finetuning.post_training import package_model
 
 
 def main():
@@ -13,7 +15,9 @@ def main():
         cfg = hydra.compose(config_name=config_name)
 
     print(OmegaConf.to_yaml(cfg))
+    pre_train(cfg)
     train(cfg)
+    package_model(cfg)
 
 
 if __name__ == "__main__":
