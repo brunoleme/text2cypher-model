@@ -95,75 +95,75 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         outputs=[ProcessingOutput(source="/opt/ml/processing/output/model-artifacts", destination=training_artifacts_output_uri, output_name="model-artifacts")]
     )
 
-    # Evaluation
-    evaluation_processor = ScriptProcessor(
-        image_uri=image_uri,
-        command=["python3"],
-        role=role_arn,
-        instance_count=evaluation_instance_count,
-        instance_type=evaluation_instance_type,
-        volume_size_in_gb=30,
-        env={
-            "ENV": env_param,
-            "WANDB_API_KEY": wandb_api_key,
-            "OPENAI_API_KEY": open_ai_key,
-            "PIPELINE_RUN_ID": pipeline_run_id_param,
-        },
-    )
+    # # Evaluation
+    # evaluation_processor = ScriptProcessor(
+    #     image_uri=image_uri,
+    #     command=["python3"],
+    #     role=role_arn,
+    #     instance_count=evaluation_instance_count,
+    #     instance_type=evaluation_instance_type,
+    #     volume_size_in_gb=30,
+    #     env={
+    #         "ENV": env_param,
+    #         "WANDB_API_KEY": wandb_api_key,
+    #         "OPENAI_API_KEY": open_ai_key,
+    #         "PIPELINE_RUN_ID": pipeline_run_id_param,
+    #     },
+    # )
 
-    evaluation_report = PropertyFile(
-        name="EvaluationReport",
-        output_name="evaluation-metrics",
-        path=f"{pipeline_run_uuid}/reports/eval_metrics.json"
-    )
+    # evaluation_report = PropertyFile(
+    #     name="EvaluationReport",
+    #     output_name="evaluation-metrics",
+    #     path=f"{pipeline_run_uuid}/reports/eval_metrics.json"
+    # )
 
-    evaluation_step = ProcessingStep(
-        name="ModelEvaluation",
-        processor=evaluation_processor,
-        code="scripts/evaluate_model.py",
-        job_arguments=[
-            "--config-path", "src/text2cypher/finetuning/config",
-            "--config-name", project_config
-        ],
-        inputs=[
-            ProcessingInput(
-                source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
-                destination="/opt/ml/processing/input/preprocessed",
-                input_name="training-data"
-            ),
-            ProcessingInput(
-                source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
-                destination="/opt/ml/processing/input/model-artifacts",
-                input_name="model-artifacts"
-            )
-        ],
-        outputs=[ProcessingOutput(
-            source="/opt/ml/processing/output/reports",
-            destination=training_artifacts_output_uri,
-            output_name="evaluation-metrics",
-        )],
-        property_files=[evaluation_report],
-    )
+    # evaluation_step = ProcessingStep(
+    #     name="ModelEvaluation",
+    #     processor=evaluation_processor,
+    #     code="scripts/evaluate_model.py",
+    #     job_arguments=[
+    #         "--config-path", "src/text2cypher/finetuning/config",
+    #         "--config-name", project_config
+    #     ],
+    #     inputs=[
+    #         ProcessingInput(
+    #             source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
+    #             destination="/opt/ml/processing/input/preprocessed",
+    #             input_name="training-data"
+    #         ),
+    #         ProcessingInput(
+    #             source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
+    #             destination="/opt/ml/processing/input/model-artifacts",
+    #             input_name="model-artifacts"
+    #         )
+    #     ],
+    #     outputs=[ProcessingOutput(
+    #         source="/opt/ml/processing/output/model-artifacts",
+    #         destination=training_artifacts_output_uri,
+    #         output_name="evaluation-metrics",
+    #     )],
+    #     property_files=[evaluation_report],
+    # )
 
-    model = Model(
-        image_uri=image_uri,
-        model_data=package_model_uri,
-        role=role_arn,
-        sagemaker_session=session,
-    )
+    # model = Model(
+    #     image_uri=image_uri,
+    #     model_data=package_model_uri,
+    #     role=role_arn,
+    #     sagemaker_session=session,
+    # )
 
-    register_model_step = ModelStep(
-        name="RegisterNoteChatModel",
-        step_args=model.register(
-            content_types=["application/json"],
-            response_types=["application/json"],
-            inference_instances=[deployment_instance_type],
-            transform_instances=[deployment_instance_type],
-            model_package_group_name="NoteChatModel",
-            approval_status="Approved",
-            description="Registered model for notechat generation",
-        ),
-    )
+    # register_model_step = ModelStep(
+    #     name="RegisterNoteChatModel",
+    #     step_args=model.register(
+    #         content_types=["application/json"],
+    #         response_types=["application/json"],
+    #         inference_instances=[deployment_instance_type],
+    #         transform_instances=[deployment_instance_type],
+    #         model_package_group_name="NoteChatModel",
+    #         approval_status="Approved",
+    #         description="Registered model for notechat generation",
+    #     ),
+    # )
 
     # deploy_model_step = LambdaStep(
     #     name="DeployNoteChatModel",
@@ -182,16 +182,16 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     #     ],
     # )
 
-    condition_step = ConditionStep(
-        name="CheckBertScoreCondition",
-        conditions=[ConditionGreaterThanOrEqualTo(
-            left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="bert_score"),
-            right=0.8,
-        )],
-        # if_steps=[register_model_step, deploy_model_step],
-        if_steps=[register_model_step],
-        else_steps=[],
-    )
+    # condition_step = ConditionStep(
+    #     name="CheckBertScoreCondition",
+    #     conditions=[ConditionGreaterThanOrEqualTo(
+    #         left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="bert_score"),
+    #         right=0.8,
+    #     )],
+    #     # if_steps=[register_model_step, deploy_model_step],
+    #     if_steps=[register_model_step],
+    #     else_steps=[],
+    # )
 
     return Pipeline(
         name="NoteChatPipeline",
@@ -199,7 +199,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             source_data_folder_uri,
             preprocessed_data_output_uri,
             training_artifacts_output_uri,
-            package_model_uri,
+            # package_model_uri,
             # evaluation_input_local_folder,
             pipeline_run_id_param,
             # job_prefix_name,
@@ -211,14 +211,14 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             preprocessing_instance_count,
             training_instance_type,
             training_instance_count,
-            evaluation_instance_type,
-            evaluation_instance_count,
-            deployment_instance_type,
+            # evaluation_instance_type,
+            # evaluation_instance_count,
+            # deployment_instance_type,
             project_config,
             # lambda_deployment_arn,
         ],
-        steps=[preprocessing_step, training_step, evaluation_step, condition_step],
+        # steps=[preprocessing_step, training_step, evaluation_step, condition_step],
         # steps=[preprocessing_step, training_step, evaluation_step],
-        # steps=[preprocessing_step, training_step],
+        steps=[preprocessing_step, training_step],
         # steps=[preprocessing_step],
     )

@@ -119,7 +119,6 @@ def evaluate_model(cfg: DictConfig):
 
         model_metrics_df = pd.concat(results, axis=1)
         wandb.log({"evaluation_results": wandb.Table(dataframe=model_metrics_df)})
-        os.makedirs(os.path.join(f'{cfg.training.model_artifact_dir}/{pipeline_run_id}', "reports"), exist_ok=True)
         model_metrics_df.to_json(f'{cfg.training.model_artifact_dir}/{pipeline_run_id}/reports/eval_metrics.json', lines=True, orient='records')
         run.finish()
         logger.info("Finished computing evaluation metrics")
