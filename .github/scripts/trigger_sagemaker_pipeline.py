@@ -42,7 +42,7 @@ def main():
             "InputDataFolderURI": "s3://bl-portfolio-ml-sagemaker-source-data/notechat-dataset/",
             "PreprocessedOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/input/preprocessed",
             "TrainingOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts",
-            "PackagedModelS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts/{pipeline_run_uuid}",
+            "PackagedModelS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts/{pipeline_run_uuid}/model.tar.gz",
             "PreprocessingInstanceType": args.preprocessing_instance_type,
             "PreprocessingInstanceCount": args.preprocessing_instance_count,
             "TrainingInstanceType": args.training_instance_type,
