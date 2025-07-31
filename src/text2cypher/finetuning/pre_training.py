@@ -10,5 +10,6 @@ def pre_train(cfg: DictConfig):
     root = os.path.join(cfg.training.model_artifact_dir, pipeline_run_id)
     os.makedirs(os.path.join(root, "checkpoints"), exist_ok=True)
     os.makedirs(os.path.join(root, "hf_model"), exist_ok=True)
+    os.makedirs(os.path.join(root, "sanity_check"), exist_ok=True)
     # os.makedirs(os.path.join(root, "reports"), exist_ok=True)
     logger.info(f"Created artifact folders under: {root}")
