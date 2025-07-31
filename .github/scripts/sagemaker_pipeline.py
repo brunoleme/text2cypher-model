@@ -165,22 +165,25 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         ),
     )
 
+    registered_model_package = register_model_step.properties.ModelPackageArn
+
     deploy_model_step = LambdaStep(
         name="DeployNoteChatModel",
         lambda_func=Lambda(function_arn=lambda_deployment_arn, session=session),
         inputs={
-            "model_name": "notechat-model",
-            "image_uri": image_uri,
-            "model_data": package_model_uri,
-            "role": role_arn,
+            "model_package_arn": registered_model_package,
             "endpoint_name": "notechat-model-endpoint",
-            "instance_type": deployment_instance_type
+            "instance_type": deployment_instance_type,
+            "role": role_arn
         },
         outputs=[
             LambdaOutput(output_name="status"),
             LambdaOutput(output_name="endpoint_name")
         ],
     )
+
+    register_model_step.add_depends_on([evaluation_step])
+    deploy_model_step.add_depends_on([register_model_step])
 
     condition_step = ConditionStep(
         name="CheckBertScoreCondition",
