@@ -47,8 +47,8 @@ def main():
             "PreprocessingInstanceCount": args.preprocessing_instance_count,
             "TrainingInstanceType": args.training_instance_type,
             "TrainingInstanceCount": args.training_instance_count,
-            # "EvaluationInstanceType": args.evaluation_instance_type,
-            # "EvaluationInstanceCount": args.evaluation_instance_count,
+            "EvaluationInstanceType": args.evaluation_instance_type,
+            "EvaluationInstanceCount": args.evaluation_instance_count,
             # "DeploymentInstanceType": args.deployment_instance_type,
             # "LambdaDeploymentARN": args.lambda_deployment_arn
         }
