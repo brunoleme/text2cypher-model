@@ -18,5 +18,8 @@ RUN uv pip install --system -e .
 # Set environment variable for Python module resolution
 ENV PYTHONPATH=/app
 
-# Default entrypoint for training (can override with CMD or docker run ...)
-ENTRYPOINT ["python", "train.py"]
+# Let SageMaker know which script contains the inference entrypoints
+ENV SAGEMAKER_PROGRAM=src/text2cypher/api/inference.py
+
+# Let SageMaker start the model server
+CMD ["serve"]
