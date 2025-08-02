@@ -20,6 +20,3 @@ ENV PYTHONPATH=/app
 
 # Let SageMaker know which script contains the inference entrypoints
 ENV SAGEMAKER_PROGRAM=src/text2cypher/api/inference.py
-
-# Let SageMaker start the model server
-CMD ["serve"]
