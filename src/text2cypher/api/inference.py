@@ -4,6 +4,7 @@ import os
 import re
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+import time
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -39,9 +40,12 @@ def model_fn(model_dir):
     """
     Load HF model and tokenizer from the model_dir.
     """
+    print(f"[INFO] Loading model on device: {DEVICE}")
+
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForSeq2SeqLM.from_pretrained(model_dir).to(DEVICE)
     return {"tokenizer": tokenizer, "model": model}
+
 
 def input_fn(request_body, content_type="application/json"):
     """
@@ -72,6 +76,8 @@ def predict_fn(inputs, model_artifacts):
     conversation = inputs["conversation"]
     max_length = inputs["max_length"]
 
+    print(f"[INFO] data on device: {DEVICE}")
+
     encoded = tokenizer(
         conversation,
         return_tensors="pt",
@@ -82,6 +88,7 @@ def predict_fn(inputs, model_artifacts):
 
     model.eval()
     with torch.no_grad():
+        start = time.time()
         outputs = model.generate(
             **encoded,
             max_length=max_length + 2,
@@ -91,6 +98,7 @@ def predict_fn(inputs, model_artifacts):
             repetition_penalty=1.2,
             no_repeat_ngram_size=3,
         )
+        print(f"⏱ Inference took {time.time() - start:.2f} seconds")
 
     note = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return {"clinical_note": note}
