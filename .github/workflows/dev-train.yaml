@@ -64,6 +64,12 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Login to SageMaker public ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 \
+            | docker login --username AWS \
+              --password-stdin 763104351884.dkr.ecr.us-east-1.amazonaws.com
+
       - name: Build inference image
         run: |
           docker build -t $ECR_REPOSITORY_URI:$INFERENCE_IMAGE_TAG -f Dockerfile.inference .
