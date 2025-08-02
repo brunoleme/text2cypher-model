@@ -17,6 +17,3 @@ RUN uv pip install --system -e .
 
 # Set environment variable for Python module resolution
 ENV PYTHONPATH=/app
-
-# Let SageMaker know which script contains the inference entrypoints
-ENV SAGEMAKER_PROGRAM=src/text2cypher/api/inference.py

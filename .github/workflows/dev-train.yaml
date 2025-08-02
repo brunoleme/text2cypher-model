@@ -66,10 +66,7 @@ jobs:
 
       - name: Build inference image
         run: |
-          docker build \
-            --build-arg BASE_IMAGE=$BASE_IMAGE \
-            -t $ECR_REPOSITORY_URI:$INFERENCE_IMAGE_TAG \
-            -f Dockerfile.inference .
+          docker build -t $ECR_REPOSITORY_URI:$INFERENCE_IMAGE_TAG -f Dockerfile.inference .
           docker push $ECR_REPOSITORY_URI:$INFERENCE_IMAGE_TAG
 
   deploy-lambda:
