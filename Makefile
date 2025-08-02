@@ -106,6 +106,7 @@ sagemaker-pipeline-trigger:
 	@echo "Running SageMaker trigger..."
 	python .github/scripts/trigger_sagemaker_pipeline.py \
 		--image-uri $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
+		--inference-image-uri $(ECR_REPOSITORY_URI):$(INFERENCE_IMAGE_TAG) \
 		--role-arn $(SAGEMAKER_ROLE_ARN) \
 		--job-name text2cypher-$(ENV) \
 		--env $(ENV) \
@@ -119,12 +120,3 @@ sagemaker-pipeline-trigger:
 		--evaluation-instance-count 1 \
 		--deployment-instance-type $(DEPLOYMENT_INSTANCE_TYPE) \
 		--lambda-deployment-arn $(LAMBDA_DEPLOYMENT_ARN)
-
-sagemaker-deploy-endpoint:
-	python .github/scripts/deploy_sagemaker_endpoint.py \
-		--image-uri $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
-		--role-arn $(SAGEMAKER_ROLE_ARN) \
-		--endpoint-name text2cypher-$(ENV)-endpoint \
-		--model-data-s3-uri $(MODEL_ARTIFACT_S3_URI) \
-		--instance-type ml.g4dn.xlarge \
-		--instance-count 1

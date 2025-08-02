@@ -6,6 +6,7 @@ from sagemaker_pipeline import create_pipeline
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--image-uri", required=True, help="ECR image URI")
+    parser.add_argument("--inference-image-uri", required=True, help="ECR inference image URI")
     parser.add_argument("--role-arn", required=True, help="SageMaker Execution Role ARN")
     parser.add_argument("--job-name", required=True, help="Training Job Name")
     parser.add_argument("--env", required=True, choices=["dev", "staging", "prod"], help="Environment")
@@ -34,6 +35,7 @@ def main():
         parameters={
             "PipelineRunID": pipeline_run_uuid,
             "ImageURI": args.image_uri,
+            "InferenceImageURI": args.inference_image_uri,
             # "RoleARN": args.role_arn,
             # "JobPrefixName": "Text2Cypher",
             "Environment": args.env,

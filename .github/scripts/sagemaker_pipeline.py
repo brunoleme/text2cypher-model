@@ -23,6 +23,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     wandb_api_key = ParameterString(name="WandbApiKey", default_value="")
     open_ai_key = ParameterString(name="OpenAIApiKey", default_value="")
     image_uri = ParameterString(name="ImageURI", default_value="")
+    inference_image_uri = ParameterString(name="InferenceImageURI", default_value="")
     preprocessing_instance_type = ParameterString(name="PreprocessingInstanceType", default_value="ml.m5.large")
     preprocessing_instance_count = ParameterInteger(name="PreprocessingInstanceCount", default_value=1)
     training_instance_type = ParameterString(name="TrainingInstanceType", default_value="ml.m5.large")
@@ -146,7 +147,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     )
 
     model = Model(
-        image_uri=image_uri,
+        image_uri=inference_image_uri,
         model_data=package_model_uri,
         role=role_arn,
         sagemaker_session=session,
@@ -189,7 +190,6 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             right=0.8,
         )],
         if_steps=[register_model_step, deploy_model_step],
-        # if_steps=[register_model_step],
         else_steps=[],
     )
 
@@ -200,13 +200,13 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             preprocessed_data_output_uri,
             training_artifacts_output_uri,
             package_model_uri,
-            # evaluation_input_local_folder,
             pipeline_run_id_param,
             # job_prefix_name,
             env_param,
             wandb_api_key,
             open_ai_key,
             image_uri,
+            inference_image_uri,
             preprocessing_instance_type,
             preprocessing_instance_count,
             training_instance_type,
@@ -218,7 +218,4 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             lambda_deployment_arn,
         ],
         steps=[preprocessing_step, training_step, evaluation_step, condition_step],
-        # steps=[preprocessing_step, training_step, evaluation_step],
-        # steps=[preprocessing_step, training_step],
-        # steps=[preprocessing_step],
     )
