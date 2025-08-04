@@ -88,7 +88,7 @@ def train(cfg: DictConfig):
 
     logger.info("Saving model in hf format")
     hf_save_path = os.path.join(cfg.training.model_artifact_dir, f"{pipeline_run_id}/hf_model")
-    model.model.save_pretrained(hf_save_path)
+    model.model.merge_and_unload().save_pretrained(hf_save_path)
     model.tokenizer.save_pretrained(hf_save_path)
     logger.success("Model saved successfully")
 
