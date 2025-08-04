@@ -9,4 +9,4 @@ RUN pip install --upgrade pip && pip install uv && uv pip install --system -e .
 
 # Set environment variables
 ENV PYTHONPATH=/app
-ENV SAGEMAKER_PROGRAM=src/text2cypher/api/inference.py
+ENV SAGEMAKER_PROGRAM=code/inference.py
