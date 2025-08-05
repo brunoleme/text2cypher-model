@@ -76,7 +76,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         instance_count=training_instance_count,
         role=role_arn,
         transformers_version="4.49.0",
-        pytorch_version="2.1.1",
+        pytorch_version="2.6.0",
         py_version="py310",
         env={
             "WANDB_API_KEY": wandb_api_key,
@@ -152,7 +152,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         model_data=training_model_output_path,
         role=role_arn,
         transformers_version="4.49.0",
-        pytorch_version="2.1.1",
+        pytorch_version="2.6.0",
         py_version="py310",
         image_uri=None,  # only use if overriding the default
         sagemaker_session=session,
