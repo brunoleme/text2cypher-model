@@ -13,6 +13,8 @@ from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
 from sagemaker.workflow.lambda_step import LambdaStep, LambdaOutput
 from sagemaker.lambda_helper import Lambda
+from sagemaker import image_uris
+
 
 def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     session = PipelineSession()
@@ -68,16 +70,15 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         outputs=[ProcessingOutput(source="/opt/ml/processing/output/preprocessed", destination=preprocessed_data_output_uri, output_name="training-data")]
     )
 
-
     huggingface_estimator = HuggingFace(
         entry_point="scripts/train.py",
         source_dir=".",  # your root folder, adjust if needed
         instance_type=training_instance_type,
         instance_count=training_instance_count,
         role=role_arn,
-        transformers_version="4.49.0",
-        pytorch_version="2.6.0",
-        py_version="py312",
+        transformers_version="4.26",
+        pytorch_version="1.13",
+        py_version="py39",
         env={
             "WANDB_API_KEY": wandb_api_key,
             "PIPELINE_RUN_ID": pipeline_run_id_param,
@@ -148,13 +149,20 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         property_files=[evaluation_report],
     )
 
+    inference_image_uri = image_uris.retrieve(
+        framework="huggingface",
+        region="us-east-1",
+        version="4.26",
+        image_scope="inference",
+        base_framework_version="pytorch1.13",  # or pytorch2.6.0 if it's truly supported
+        py_version="py39"
+    )
+    print(inference_image_uri)
+
     huggingface_model = HuggingFaceModel(
         model_data=training_model_output_path,
         role=role_arn,
-        transformers_version="4.49.0",
-        pytorch_version="2.6.0",
-        py_version="py312",
-        image_uri=None,  # only use if overriding the default
+        image_uri=inference_image_uri,
         sagemaker_session=session,
     )
 
