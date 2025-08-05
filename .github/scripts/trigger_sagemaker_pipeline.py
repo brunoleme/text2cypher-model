@@ -35,7 +35,7 @@ def main():
         parameters={
             "PipelineRunID": pipeline_run_uuid,
             "ImageURI": args.image_uri,
-            "InferenceImageURI": args.inference_image_uri,
+            # "InferenceImageURI": args.inference_image_uri,
             # "RoleARN": args.role_arn,
             # "JobPrefixName": "Text2Cypher",
             "Environment": args.env,
