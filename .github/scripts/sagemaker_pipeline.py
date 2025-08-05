@@ -77,6 +77,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         instance_count=training_instance_count,
         role=role_arn,
         image_uri=image_uri,
+        py_version="py39",
         env={
             "WANDB_API_KEY": wandb_api_key,
             "PIPELINE_RUN_ID": pipeline_run_id_param,
