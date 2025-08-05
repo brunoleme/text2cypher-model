@@ -76,9 +76,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         instance_type=training_instance_type,
         instance_count=training_instance_count,
         role=role_arn,
-        transformers_version="4.26",
-        pytorch_version="1.13",
-        py_version="py39",
+        image_uri=image_uri,
         env={
             "WANDB_API_KEY": wandb_api_key,
             "PIPELINE_RUN_ID": pipeline_run_id_param,
