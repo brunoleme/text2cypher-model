@@ -154,6 +154,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         region="us-east-1",
         version="4.26",
         image_scope="inference",
+        instance_type="ml.g4dn.xlarge",
         base_framework_version="pytorch1.13",  # or pytorch2.6.0 if it's truly supported
         py_version="py39"
     )
