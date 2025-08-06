@@ -1,8 +1,5 @@
-from sagemaker.huggingface import HuggingFace
-from sagemaker.huggingface.model import HuggingFaceModel
 from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
 from sagemaker.workflow.steps import ProcessingStep
-from sagemaker.workflow.steps import TrainingStep
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.workflow.parameters import ParameterString, ParameterInteger
@@ -11,10 +8,9 @@ from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
+from sagemaker.model import Model
 from sagemaker.workflow.lambda_step import LambdaStep, LambdaOutput
 from sagemaker.lambda_helper import Lambda
-from sagemaker import image_uris
-
 
 def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     session = PipelineSession()
@@ -40,7 +36,6 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
 
     preprocessed_data_output_uri = ParameterString("PreprocessedOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed")
     training_artifacts_output_uri = ParameterString("TrainingOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts")
-    training_model_output_path = f"s3://bl-portfolio-ml-sagemaker-dev/output/artifacts/{pipeline_run_uuid}/hf_model"
     package_model_uri = ParameterString("PackagedModelS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/output/artifacts/no_pipeline_id/model.tar.gz")
 
     # Preprocessing
@@ -70,32 +65,35 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         outputs=[ProcessingOutput(source="/opt/ml/processing/output/preprocessed", destination=preprocessed_data_output_uri, output_name="training-data")]
     )
 
-    huggingface_estimator = HuggingFace(
-        entry_point="scripts/train.py",
-        source_dir=".",  # your root folder, adjust if needed
-        instance_type=training_instance_type,
-        instance_count=training_instance_count,
-        role=role_arn,
+    # Training
+    training_processor = ScriptProcessor(
         image_uri=image_uri,
-        py_version="py39",
+        command=["python3"],
+        role=role_arn,
+        instance_count=training_instance_count,
+        instance_type=training_instance_type,
+        volume_size_in_gb=30,
         env={
+            "ENV": env_param,
             "WANDB_API_KEY": wandb_api_key,
             "PIPELINE_RUN_ID": pipeline_run_id_param,
-            "ENV": env_param,
         },
-        hyperparameters={
-            "config-path": "src/text2cypher/finetuning/config",
-            "config-name": project_config
-        },
-        output_path=training_model_output_path,
     )
 
-    training_step = TrainingStep(
-        name="TrainNoteChatModel",
-        estimator=huggingface_estimator,
-        inputs={
-            "training": preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri
-        },
+    training_step = ProcessingStep(
+        name="ModelTraining",
+        processor=training_processor,
+        code="scripts/train.py",
+        job_arguments=[
+            "--config-path", "src/text2cypher/finetuning/config",
+            "--config-name", project_config
+        ],
+        inputs=[ProcessingInput(
+            source=preprocessing_step.properties.ProcessingOutputConfig.Outputs["training-data"].S3Output.S3Uri,
+            destination="/opt/ml/processing/input/preprocessed",
+            input_name="training-data"
+        )],
+        outputs=[ProcessingOutput(source="/opt/ml/processing/output/model-artifacts", destination=training_artifacts_output_uri, output_name="model-artifacts")]
     )
 
     # Evaluation
@@ -135,7 +133,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
                 input_name="training-data"
             ),
             ProcessingInput(
-                source=training_step.properties.ModelArtifacts.S3ModelArtifacts,
+                source=training_step.properties.ProcessingOutputConfig.Outputs["model-artifacts"].S3Output.S3Uri,
                 destination="/opt/ml/processing/input/model-artifacts",
                 input_name="model-artifacts"
             )
@@ -148,34 +146,24 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
         property_files=[evaluation_report],
     )
 
-    inference_image_uri = image_uris.retrieve(
-        framework="huggingface",
-        region="us-east-1",
-        version="4.26",
-        image_scope="inference",
-        instance_type="ml.g4dn.xlarge",
-        base_framework_version="pytorch1.13",  # or pytorch2.6.0 if it's truly supported
-        py_version="py39"
-    )
-    print(inference_image_uri)
-
-    huggingface_model = HuggingFaceModel(
-        model_data=training_model_output_path,
-        role=role_arn,
+    model = Model(
         image_uri=inference_image_uri,
+        model_data=package_model_uri,
+        role=role_arn,
         sagemaker_session=session,
     )
 
     register_model_step = ModelStep(
         name="RegisterNoteChatModel",
-        step_args=huggingface_model.register(
+        step_args=model.register(
             content_types=["application/json"],
             response_types=["application/json"],
             inference_instances=[deployment_instance_type],
             transform_instances=[deployment_instance_type],
             model_package_group_name="NoteChatModel",
             approval_status="Approved",
-        )
+            description="Registered model for notechat generation",
+        ),
     )
 
     registered_model_package = register_model_step.properties.ModelPackageArn
@@ -218,6 +206,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             wandb_api_key,
             open_ai_key,
             image_uri,
+            inference_image_uri,
             preprocessing_instance_type,
             preprocessing_instance_count,
             training_instance_type,
