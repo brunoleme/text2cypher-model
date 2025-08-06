@@ -86,6 +86,12 @@ def train(cfg: DictConfig):
     trainer.fit(model, datamodule=datamodule)
     logger.success("Training completed successfully")
 
+    logger.info("Saving model in hf format")
+    hf_save_path = os.path.join(cfg.training.model_artifact_dir, f"{pipeline_run_id}/hf_model")
+    model.model.merge_and_unload().save_pretrained(hf_save_path)
+    model.tokenizer.save_pretrained(hf_save_path)
+    logger.success("Model saved successfully")
+
     wandb_logger.experiment.summary["best_val_loss"] = trainer.callback_metrics["val_loss"].item()
     wandb_logger.experiment.summary["best_epoch"] = trainer.current_epoch
     wandb_logger.experiment.summary["sagemaker_pipeline_run_id"] = pipeline_run_id
