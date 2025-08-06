@@ -19,7 +19,6 @@ def parse_args():
     parser.add_argument("--evaluation-instance-type", default="ml.m5.large", help="Instance type")
     parser.add_argument("--evaluation-instance-count", type=int, default=1)
     parser.add_argument("--deployment-instance-type", default="ml.m5.large", help="Instance type")
-    parser.add_argument("--lambda-deployment-arn", required=True, help="Lambda deployment function ARN")
     return parser.parse_args()
 
 
@@ -51,8 +50,7 @@ def main():
             "TrainingInstanceCount": args.training_instance_count,
             "EvaluationInstanceType": args.evaluation_instance_type,
             "EvaluationInstanceCount": args.evaluation_instance_count,
-            "DeploymentInstanceType": args.deployment_instance_type,
-            "LambdaDeploymentARN": args.lambda_deployment_arn
+            "DeploymentInstanceType": args.deployment_instance_type
         }
     )
 

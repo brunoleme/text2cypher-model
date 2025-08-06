@@ -31,7 +31,6 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
     evaluation_instance_type = ParameterString(name="EvaluationInstanceType", default_value="ml.m5.large")
     evaluation_instance_count = ParameterInteger(name="EvaluationInstanceCount", default_value=1)
     deployment_instance_type = ParameterString(name="DeploymentInstanceType", default_value="ml.m5.large")
-    lambda_deployment_arn = ParameterString(name="LambdaDeploymentARN", default_value="")
     project_config = ParameterString(name="ProjectConfig", default_value="config.dev")
 
     preprocessed_data_output_uri = ParameterString("PreprocessedOutputS3Uri", default_value="s3://bl-portfolio-ml-sagemaker-dev/input/preprocessed")
@@ -163,25 +162,16 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             model_package_group_name="NoteChatModel",
             approval_status="Approved",
             description="Registered model for notechat generation",
+            customer_metadata_properties={
+                "pipeline_run_id": pipeline_run_id_param,
+                "env": env_param,
+            },
         ),
     )
 
     registered_model_package = register_model_step.properties.ModelPackageArn
 
-    deploy_model_step = LambdaStep(
-        name="DeployNoteChatModel",
-        lambda_func=Lambda(function_arn=lambda_deployment_arn, session=session),
-        inputs={
-            "model_package_arn": registered_model_package,
-            "endpoint_name": "notechat-model-endpoint",
-            "instance_type": deployment_instance_type,
-            "role": role_arn
-        },
-        outputs=[
-            LambdaOutput(output_name="status"),
-            LambdaOutput(output_name="endpoint_name")
-        ],
-    )
+
 
     condition_step = ConditionStep(
         name="CheckBertScoreCondition",
@@ -189,7 +179,7 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             left=JsonGet(step_name=evaluation_step.name, property_file=evaluation_report, json_path="bert_score"),
             right=0.8,
         )],
-        if_steps=[register_model_step, deploy_model_step],
+        if_steps=[register_model_step],
         else_steps=[],
     )
 
@@ -215,7 +205,6 @@ def create_pipeline(role_arn: str, pipeline_run_uuid: str = None) -> Pipeline:
             evaluation_instance_count,
             deployment_instance_type,
             project_config,
-            lambda_deployment_arn,
         ],
         steps=[preprocessing_step, training_step, evaluation_step, condition_step],
     )

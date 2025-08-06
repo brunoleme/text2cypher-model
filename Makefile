@@ -118,5 +118,4 @@ sagemaker-pipeline-trigger:
 		--training-instance-count 1 \
 		--evaluation-instance-type $(EVALUATION_INSTANCE_TYPE) \
 		--evaluation-instance-count 1 \
-		--deployment-instance-type $(DEPLOYMENT_INSTANCE_TYPE) \
-		--lambda-deployment-arn $(LAMBDA_DEPLOYMENT_ARN)
+		--deployment-instance-type $(DEPLOYMENT_INSTANCE_TYPE)
