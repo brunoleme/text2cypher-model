@@ -26,7 +26,12 @@ dependencies = [
   "pandas",
   "s3fs",
   "boto3",
-  "sagemaker"
+  "sagemaker",
+  "python-dotenv",
+  "fastapi",
+  "uvicorn[standard]",
+  "requests",
+  "psycopg2-binary",
 ]
 
 [project.optional-dependencies]

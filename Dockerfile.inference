@@ -1,12 +1,24 @@
-FROM 763104351884.dkr.ecr.us-east-1.amazonaws.com/pytorch-inference:1.13.1-gpu-py39-cu117-ubuntu20.04-sagemaker
+#Dockerfile.inference
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel
 
-# Set up working directory
 WORKDIR /app
 
-# Install dependencies
-COPY . .
-RUN pip install --upgrade pip && pip install uv && uv pip install --system -e .
+# Install uv
+RUN pip install --upgrade pip && \
+    pip install uv
 
-# Set environment variables
+# Copy project files
+COPY . .
+
+# Install project dependencies in editable mode
+RUN uv pip install --system -e .
+
+# Set environment variable for Python module resolution
 ENV PYTHONPATH=/app
-ENV SAGEMAKER_PROGRAM=code/inference.py
+
+# Expose port
+EXPOSE 8000
+
+# Run FastAPI app
+CMD ["uvicorn", "text2cypher.api.inference:app", "--host", "0.0.0.0", "--port", "8000"]
+

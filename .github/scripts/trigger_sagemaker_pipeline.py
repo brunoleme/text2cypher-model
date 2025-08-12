@@ -53,6 +53,7 @@ def main():
             "DeploymentInstanceType": args.deployment_instance_type
         }
     )
+    execution.wait(delay=60, max_attempts=240)
 
 if __name__ == "__main__":
     try:
