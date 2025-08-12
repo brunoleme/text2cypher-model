@@ -5,14 +5,21 @@ description = "Clinical note generation with T5 and PEFT"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-  "torch>=2.0",
-  "pytorch-lightning>=2.0",
-  "transformers>=4.38",
-  "peft>=0.8.0",
-  "datasets>=4.0",
+  # --- Core ML stack (versions known to work together) ---
+  "torch>=2.2,<2.3",            # 2.2.x has device_mesh etc.
+  "torchvision>=0.17,<0.18",
+  "torchaudio>=2.2,<2.3",
+  "transformers>=4.42,<4.43",
+  "accelerate>=0.33,<0.34",
+  "peft>=0.11,<0.12",
+  "datasets>=2.20,<2.21",
+  "tokenizers>=0.19,<0.20",
+  "safetensors>=0.4,<0.5",
+
+  # --- Your existing deps (left mostly as-is) ---
+  "pytorch-lightning>=2.0,<3.0",
   "evaluate",
-  "pydantic",
-  "pydantic-core",
+  "pydantic>=2",
   "langsmith",
   "langchain-openai",
   "hydra-core>=1.3",
