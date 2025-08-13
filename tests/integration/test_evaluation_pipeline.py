@@ -9,8 +9,11 @@ from tests.utils import load_config_with_overrides, run_preprocessing_for_tests
 def test_evaluation_pipeline(temp_output_dirs):
     run_preprocessing_for_tests(temp_output_dirs["preprocessed_input_data_folder"])
 
+    env_folder = "dev"
+    os.environ["ENV"] = env_folder
+
     # Create dummy checkpoint file
-    model_artifacts_dir = temp_output_dirs["preprocessed_input_data_folder"] / "model-artifacts-dev"
+    model_artifacts_dir = temp_output_dirs["preprocessed_input_data_folder"] / f"model-artifacts-{env_folder}"
     model_artifacts_dir.mkdir(exist_ok=True)
     dummy_checkpoint = model_artifacts_dir / "pipeline_id_best_model.ckpt"
     dummy_checkpoint.touch()
@@ -33,7 +36,6 @@ def test_evaluation_pipeline(temp_output_dirs):
         }
     )
 
-    os.environ["ENV"] = "dev"
     os.environ["PIPELINE_RUN_ID"] = "pipeline_id"
 
     with (

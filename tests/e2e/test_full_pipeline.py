@@ -21,10 +21,11 @@ def test_full_pipeline(temp_output_dirs):
         }
     )
 
-    os.environ["ENV"] = "dev"
+    env_folder = "dev"
+    os.environ["ENV"] = env_folder
     os.environ["PIPELINE_RUN_ID"] = "pipeline_id"
 
-    (temp_output_dirs["preprocessed_output_data_folder"] / "preprocessed-dev").mkdir(parents=True, exist_ok=True)
+    (temp_output_dirs["preprocessed_output_data_folder"]).mkdir(parents=True, exist_ok=True)
     (temp_output_dirs["reports_dir"]).mkdir(parents=True, exist_ok=True)
 
     preprocessing(cfg)

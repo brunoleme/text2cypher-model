@@ -16,7 +16,8 @@ def test_training_pipeline(temp_output_dirs):
         training={"model_artifact_dir": "tests/resources/artifacts"}
     )
 
-    os.environ["ENV"] = "dev"
+    env_folder = "dev"
+    os.environ["ENV"] = env_folder
     os.environ["PIPELINE_RUN_ID"] = "pipeline_id"
     train(cfg)
 

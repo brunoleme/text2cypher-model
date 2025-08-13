@@ -12,15 +12,16 @@ def test_preprocessing_pipeline(temp_output_dirs):
         }
     )
 
-    os.environ["ENV"] = "dev"
-    (temp_output_dirs["preprocessed_output_data_folder"] / "preprocessed-dev").mkdir(parents=True, exist_ok=True)
+    env_folder = "dev"
+    os.environ["ENV"] = env_folder
+    (temp_output_dirs["preprocessed_output_data_folder"]).mkdir(parents=True, exist_ok=True)
     
     preprocessing(cfg)
 
     expected_files = [
-        "preprocessed-dev/notechat_sample_dataset_train.parquet",
-        "preprocessed-dev/notechat_sample_dataset_val.parquet",
-        "preprocessed-dev/notechat_sample_dataset_test.parquet",
+        "notechat_sample_dataset_train.parquet",
+        "notechat_sample_dataset_val.parquet",
+        "notechat_sample_dataset_test.parquet",
     ]
     for file in expected_files:
         assert (temp_output_dirs["preprocessed_output_data_folder"] / file).exists()
