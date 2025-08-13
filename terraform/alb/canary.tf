@@ -14,7 +14,10 @@ resource "aws_lb_listener_rule" "canary_weighted" {
         arn    = aws_lb_target_group.v2[0].arn
         weight = var.canary_weight_v2
       }
-      stickiness { enabled = true duration = 60 }
+      stickiness {
+        enabled = true
+        duration = 60
+      }
     }
   }
 

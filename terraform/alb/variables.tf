@@ -51,7 +51,14 @@ locals {
 }
 # Enforce at plan time
 resource "null_resource" "validate_canary_weights" {
-  triggers = { sum_ok = local.canary_weight_sum_valid ? "ok" : "bad" }
-  lifecycle { precondition { condition = self.triggers.sum_ok == "ok"
-    error_message = "canary_weight_v1 + canary_weight_v2 must equal 100." } }
+  triggers = {
+    sum_ok = local.canary_weight_sum_valid ? "ok" : "bad"
+  }
+
+  lifecycle {
+    precondition {
+      condition = self.triggers.sum_ok == "ok"
+      error_message = "canary_weight_v1 + canary_weight_v2 must equal 100."
+    }
+  }
 }
