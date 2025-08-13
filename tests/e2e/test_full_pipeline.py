@@ -5,12 +5,14 @@ from text2cypher.finetuning.evaluate_model import evaluate_model
 from tests.utils import load_config_with_overrides
 
 def test_full_pipeline(temp_output_dirs):
+    preproc_root = temp_output_dirs["preprocessed_output_data_folder"]
+    preproc_dir = preproc_root / "preprocessed"
     cfg = load_config_with_overrides(
         data={
-            "preprocessed_output_data_folder": str(temp_output_dirs["preprocessed_output_data_folder"]),
+            "preprocessed_output_data_folder": str(preproc_root),
             "source_data_folder": "tests/resources",
             "source_data_path": "source_data/notechat_sample_dataset.csv",
-            "preprocessed_input_data_folder": temp_output_dirs["preprocessed_output_data_folder"],
+            "preprocessed_input_data_folder": str(preproc_dir),
         },
         training={"model_artifact_dir": "tests/resources/artifacts"},
         evaluation={
@@ -18,6 +20,7 @@ def test_full_pipeline(temp_output_dirs):
             "test_samples_lexical_metrics": 2,
             "test_samples_semantic_metrics": 2,
             "test_samples_ai_as_judge_metrics": 2,
+            "model_artifact_dir": "tests/resources/artifacts",
         }
     )
 
@@ -25,7 +28,7 @@ def test_full_pipeline(temp_output_dirs):
     os.environ["ENV"] = env_folder
     os.environ["PIPELINE_RUN_ID"] = "pipeline_id"
 
-    (temp_output_dirs["preprocessed_output_data_folder"]).mkdir(parents=True, exist_ok=True)
+    preproc_dir.mkdir(parents=True, exist_ok=True)
     (temp_output_dirs["reports_dir"]).mkdir(parents=True, exist_ok=True)
 
     preprocessing(cfg)

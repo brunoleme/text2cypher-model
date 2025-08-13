@@ -9,7 +9,7 @@ def test_training_pipeline(temp_output_dirs):
 
     cfg = load_config_with_overrides(
         data={
-            "preprocessed_input_data_folder": "tests/resources",
+            "preprocessed_input_data_folder": "tests/resources/preprocessed",
             "source_data_folder": "tests/resources",
             "source_data_path": "source_data/notechat_sample_dataset.csv",
             },

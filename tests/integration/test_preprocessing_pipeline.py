@@ -19,9 +19,9 @@ def test_preprocessing_pipeline(temp_output_dirs):
     preprocessing(cfg)
 
     expected_files = [
-        "notechat_sample_dataset_train.parquet",
-        "notechat_sample_dataset_val.parquet",
-        "notechat_sample_dataset_test.parquet",
++        "preprocessed/notechat_sample_dataset_train.parquet",
++        "preprocessed/notechat_sample_dataset_val.parquet",
++        "preprocessed/notechat_sample_dataset_test.parquet",
     ]
     for file in expected_files:
         assert (temp_output_dirs["preprocessed_output_data_folder"] / file).exists()

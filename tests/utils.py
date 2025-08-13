@@ -15,11 +15,13 @@ def load_config_with_overrides(**overrides):
 
 def run_preprocessing_for_tests(output_dir: Path):
     source_data_folder = "tests/resources"
+    preprocessed_input_data_folder = "tests/resources"
     preprocessed_input_data_folder = str(output_dir)
     source_data_path = "source_data/notechat_sample_dataset.csv"
     env_folder = "dev"
 
-    Path(preprocessed_input_data_folder).mkdir(parents=True, exist_ok=True)
+    output_dir = Path(preprocessed_input_data_folder)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     preprocessingmodule = NoteChatDataPreprocessingModule(
         model_name="t5-small",
