@@ -1,3 +1,4 @@
+import hydra
 from omegaconf import OmegaConf
 import os
 from pathlib import Path
@@ -5,12 +6,22 @@ from pathlib import Path
 from text2cypher.finetuning.data.notechat_preprocessing import NoteChatDataPreprocessingModule
 
 
-def load_config_with_overrides(**overrides):
-    config_path = os.path.abspath("src/text2cypher/finetuning/config/config.dev.yaml")
-    cfg = OmegaConf.load(config_path)
+# def load_config_with_overrides(**overrides):
+#     config_path = os.path.abspath("src/text2cypher/finetuning/config/config.dev.yaml")
+#     cfg = OmegaConf.load(config_path)
 
-    for key, val in overrides.items():
-        OmegaConf.update(cfg, key, val)
+#     for key, val in overrides.items():
+#         OmegaConf.update(cfg, key, val)
+#     return cfg
+
+def load_config_with_overrides(**overrides):
+    config_path = "src/text2cypher/finetuning/config"  # folder containing config.dev.yaml
+    with hydra.initialize_config_dir(config_dir=config_path):
+        cfg = hydra.compose(config_name="config.dev")
+    for k, v in overrides.items():
+        OmegaConf.update(cfg, k, v)
+    # Convert to dataclasses if your schema is structured from @dataclass
+    cfg = OmegaConf.to_object(cfg)
     return cfg
 
 def run_preprocessing_for_tests(output_dir: Path):
