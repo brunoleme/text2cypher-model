@@ -49,15 +49,14 @@ variable "canary_weight_v2" {
 locals {
   canary_weight_sum_valid = var.canary_weight_v1 + var.canary_weight_v2 == 100
 }
-# Enforce at plan time
+
 resource "null_resource" "validate_canary_weights" {
-  triggers = {
-    sum_ok = local.canary_weight_sum_valid ? "ok" : "bad"
-  }
+  # keep or drop triggers; they're not needed for the check to work
+  triggers = { sum_ok = local.canary_weight_sum_valid ? "ok" : "bad" }
 
   lifecycle {
     precondition {
-      condition = self.triggers.sum_ok == "ok"
+      condition     = local.canary_weight_sum_valid
       error_message = "canary_weight_v1 + canary_weight_v2 must equal 100."
     }
   }
