@@ -27,8 +27,6 @@ module "ecs" {
   cluster_name = "${var.app_name}-${var.env}-cluster"
 
   # VPC & Subnet setup
-  vpc_id                   = module.network.vpc_id
-  public_subnet_ids        = module.network.public_subnet_ids
   private_subnet_ids       = module.network.private_subnet_ids
 
   # Security groups
