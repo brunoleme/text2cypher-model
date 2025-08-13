@@ -6,8 +6,8 @@ from text2cypher.finetuning.data.notechat_preprocessing import NoteChatDataPrepr
 
 source_data_folder = "tests/resources"
 source_data_path = "source_data/notechat_sample_dataset.csv"
-preprocessed_output_data_folder = "tests/resources"
-preprocessed_input_data_folder = "tests/resources"
+preprocessed_output_data_folder = "tests/resources/preprocessed"
+preprocessed_input_data_folder = "tests/resources/preprocessed"
 env_folder = 'dev'
 
 def test_dataset_initialization() -> None:

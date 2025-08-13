@@ -20,6 +20,7 @@ def temp_output_dirs(tmp_path):
 
     input_dir = tmp_path / "input"
     input_dir.mkdir(parents=True, exist_ok=True)
+    (input_dir / "preprocessed").mkdir(parents=True, exist_ok=True)
 
     reports_dir = output_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
