@@ -9,7 +9,8 @@ import requests
 from text2cypher.api.config import settings
 from text2cypher.finetuning.models.t5_model import T5NoteGenerationModel
 from text2cypher.finetuning.data.notechat_dataset import NoteChatDataModule
-from text2cypher.finetuning.utils.logger import setup_logger, clean_conversation
+from text2cypher.finetuning.utils.logger import setup_logger
+from text2cypher.finetuning.utils.text_utils import clean_conversation
 
 DECODER_HOST = os.getenv("DECODER_HOST", "http://localhost:8001")
 
