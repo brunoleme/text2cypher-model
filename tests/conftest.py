@@ -16,6 +16,7 @@ def mock_wandb(monkeypatch):
 def temp_output_dirs(tmp_path):
     output_dir = tmp_path / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "preprocessed").mkdir(parents=True, exist_ok=True)
 
     input_dir = tmp_path / "input"
     input_dir.mkdir(parents=True, exist_ok=True)
