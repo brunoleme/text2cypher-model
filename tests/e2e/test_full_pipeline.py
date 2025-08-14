@@ -20,7 +20,7 @@ def test_full_pipeline():
     train(cfg)
     evaluate_model(cfg)
 
-    model_artifacts_dir = Path(cfg.training.model_artifact_dir)
-    report_file = model_artifacts_dir / "reports/pipeline_id_eval_metrics.json"
+    model_artifacts_dir = Path(cfg.training.model_artifact_dir) / "pipeline_id"
+    report_file = model_artifacts_dir / "reports/eval_metrics.json"
     assert report_file.exists()
     assert report_file.read_text()

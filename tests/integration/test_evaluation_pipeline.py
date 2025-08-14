@@ -51,6 +51,6 @@ def test_evaluation_pipeline():
 
         evaluate_model(cfg)
 
-    report_file = model_artifacts_dir / "reports/pipeline_id_eval_metrics.json"
+    report_file = model_artifacts_dir / "reports/eval_metrics.json"
     assert report_file.exists()
     assert report_file.read_text()
