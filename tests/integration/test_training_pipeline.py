@@ -12,7 +12,7 @@ def test_training_pipeline():
     with hydra.initialize_config_dir(config_dir=config_path):
         cfg = hydra.compose(config_name=config_name)
 
-    run_preprocessing_for_tests(cfg.data.preprocessed_input_data_folder)
+    run_preprocessing_for_tests()
 
     env_folder = "dev"
     os.environ["ENV"] = env_folder

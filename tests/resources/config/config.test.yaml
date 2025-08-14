@@ -30,9 +30,9 @@ training:
   devices: "cpu"           # keep deterministic, no GPU dependency
 
 data:
-  train_samples: 8
-  val_samples: 4
-  test_samples: 4
+  train_samples: 10
+  val_samples: 2
+  test_samples: 2
   shuffle: false
   shuffle_seed: 42
   train_split: 0.5
