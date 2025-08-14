@@ -5,6 +5,16 @@ resource "aws_launch_template" "gpu" {
 
   key_name = var.ssh_key_name
 
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = var.root_volume_size
+      volume_type           = "gp3"
+      delete_on_termination = true
+      encrypted             = true
+    }
+  }
+
   user_data = base64encode(<<-EOF
               #!/bin/bash
               echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
@@ -44,6 +54,11 @@ resource "aws_autoscaling_group" "gpu" {
     version = "$Latest"
   }
 
+  instance_refresh {
+    strategy = "Rolling"
+    triggers = ["launch_template"]
+  }
+  
   tag {
     key                 = "AmazonECSCluster"
     value               = aws_ecs_cluster.main.name

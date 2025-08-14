@@ -102,3 +102,9 @@ variable "cluster_name" {
 variable "task_role_arn" {
   type = string
 }
+
+variable "root_volume_size" {
+  description = "Root EBS volume size (GiB) for ECS GPU instances"
+  type        = number
+  default     = 150
+}
