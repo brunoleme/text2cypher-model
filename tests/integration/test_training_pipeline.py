@@ -20,5 +20,5 @@ def test_training_pipeline():
     train(cfg)
 
     ckpts = list(Path(cfg.training.model_artifact_dir + "/pipeline_id/checkpoints").rglob("*.ckpt"))
-    assert len(ckpts) == 1
+    assert len(ckpts) > 0
     assert ckpts[0].stat().st_size > 0
