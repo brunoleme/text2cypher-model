@@ -21,8 +21,9 @@ def test_evaluation_pipeline():
     os.environ["ENV"] = env_folder
 
     # Create dummy checkpoint file
-    model_artifacts_dir = Path(cfg.training.model_artifact_dir)
-    dummy_checkpoint = model_artifacts_dir / "pipeline_id_best_model.ckpt"
+    model_artifacts_dir = Path(cfg.training.model_artifact_dir) / "pipeline_id"
+    model_artifacts_dir.mkdir(parents=True, exist_ok=True)
+    dummy_checkpoint = model_artifacts_dir / "best_model.ckpt"
     dummy_checkpoint.touch()
 
     os.environ["PIPELINE_RUN_ID"] = "pipeline_id"

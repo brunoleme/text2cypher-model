@@ -27,7 +27,7 @@ training:
   max_epochs: 1
   num_workers: 0           # avoids multiprocessing issues in CI
   model_artifact_dir: "tests/resources/artifacts"   # <- important: matches evaluation
-  devices: "cpu"           # keep deterministic, no GPU dependency
+  devices: "auto"           # keep deterministic, no GPU dependency
 
 data:
   train_samples: 10
