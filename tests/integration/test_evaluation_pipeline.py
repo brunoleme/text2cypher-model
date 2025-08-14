@@ -1,40 +1,29 @@
 import os
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 import pandas as pd
+import hydra
 
 from text2cypher.finetuning.evaluate_model import evaluate_model
-from tests.utils import load_config_with_overrides, run_preprocessing_for_tests
+from tests.utils import run_preprocessing_for_tests
 
 
-def test_evaluation_pipeline(temp_output_dirs):
-    run_preprocessing_for_tests(temp_output_dirs["preprocessed_input_data_folder"])
+def test_evaluation_pipeline():
+    config_name = f"config.test"
+    config_path = os.path.abspath("tests/resources/config")
+
+    with hydra.initialize_config_dir(config_dir=config_path):
+        cfg = hydra.compose(config_name=config_name)
+
+    run_preprocessing_for_tests(cfg.data.preprocessed_input_data_folder)
 
     env_folder = "dev"
     os.environ["ENV"] = env_folder
 
     # Create dummy checkpoint file
-    model_artifacts_dir = temp_output_dirs["preprocessed_input_data_folder"] / f"model-artifacts-{env_folder}"
-    model_artifacts_dir.mkdir(exist_ok=True)
+    model_artifacts_dir = Path(cfg.training.model_artifact_dir)
     dummy_checkpoint = model_artifacts_dir / "pipeline_id_best_model.ckpt"
     dummy_checkpoint.touch()
-
-    # Prepare config
-    cfg = load_config_with_overrides(
-        data={
-            "preprocessed_input_data_folder": "tests/resources",
-            "source_data_folder": "tests/resources",
-            "source_data_path": "source_data/notechat_sample_dataset.csv",
-        },
-        training={
-            "model_artifact_dir": str(model_artifacts_dir),
-        },
-        evaluation={
-            "reports_dir": str(temp_output_dirs["reports_dir"]),
-            "test_samples_lexical_metrics": 2,
-            "test_samples_semantic_metrics": 2,
-            "test_samples_ai_as_judge_metrics": 2,
-        }
-    )
 
     os.environ["PIPELINE_RUN_ID"] = "pipeline_id"
 
@@ -61,6 +50,6 @@ def test_evaluation_pipeline(temp_output_dirs):
 
         evaluate_model(cfg)
 
-    report_file = temp_output_dirs["reports_dir"] / "pipeline_id_eval_metrics.json"
+    report_file = model_artifacts_dir / "reports/pipeline_id_eval_metrics.json"
     assert report_file.exists()
     assert report_file.read_text()

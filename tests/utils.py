@@ -1,37 +1,13 @@
-import hydra
-from omegaconf import OmegaConf
 import os
 from pathlib import Path
 
 from text2cypher.finetuning.data.notechat_preprocessing import NoteChatDataPreprocessingModule
 
-
-# def load_config_with_overrides(**overrides):
-#     config_path = os.path.abspath("src/text2cypher/finetuning/config/config.dev.yaml")
-#     cfg = OmegaConf.load(config_path)
-
-#     for key, val in overrides.items():
-#         OmegaConf.update(cfg, key, val)
-#     return cfg
-
-def load_config_with_overrides(**overrides):
-    config_path = "src/text2cypher/finetuning/config"  # folder containing config.dev.yaml
-    with hydra.initialize_config_dir(config_dir=config_path):
-        cfg = hydra.compose(config_name="config.dev")
-    for k, v in overrides.items():
-        OmegaConf.update(cfg, k, v)
-    # Convert to dataclasses if your schema is structured from @dataclass
-    cfg = OmegaConf.to_object(cfg)
-    return cfg
-
-def run_preprocessing_for_tests(output_dir: Path):
+def run_preprocessing_for_tests():
     source_data_folder = "tests/resources"
-    preprocessed_input_data_folder = str(output_dir)
+    preprocessed_input_data_folder = "tests/resources"
     source_data_path = "source_data/notechat_sample_dataset.csv"
     env_folder = "dev"
-
-    Path(preprocessed_input_data_folder).mkdir(parents=True, exist_ok=True)
-    (Path(preprocessed_input_data_folder) / "preprocessed").mkdir(parents=True, exist_ok=True)
 
     preprocessingmodule = NoteChatDataPreprocessingModule(
         model_name="t5-small",
