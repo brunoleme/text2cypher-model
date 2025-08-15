@@ -8,7 +8,7 @@ import requests
 
 from text2cypher.api.config import settings
 from text2cypher.finetuning.models.t5_model import T5NoteGenerationModel
-from text2cypher.finetuning.data.notechat_dataset import NoteChatDataModule
+from text2cypher.finetuning.data.notechat_preprocessing import NoteChatDataPreprocessingModule
 from text2cypher.finetuning.utils.logger import setup_logger
 from text2cypher.finetuning.utils.text_utils import clean_conversation
 
@@ -99,7 +99,7 @@ async def generate_note(request: ConversationRequest):
         logger.debug(f"Original request: {request.dict()}")
         if not request.conversation:
             raise HTTPException(status_code=400, detail="Empty conversation")
-        conversation = clean_conversation(NoteChatDataModule.format_conversation(request.conversation))
+        conversation = clean_conversation(NoteChatDataPreprocessingModule.format_conversation(request.conversation))
         logger.info("Generating clinical note...")
         clinical_note = model.generate_note(conversation=conversation, max_length=request.max_length)
         logger.info("Note generation successful")
@@ -114,7 +114,7 @@ async def generate_note(request: ConversationRequest):
 @app.post("/generate_note_decoupled", response_model=NoteResponse)
 async def generate_note_with_decoupling(request: ConversationRequest):
     logger.info("Received request for distributed generation")
-    conversation = f"summarize: {NoteChatDataModule.format_conversation(request.conversation)}"
+    conversation = f"summarize: {NoteChatDataPreprocessingModule.format_conversation(request.conversation)}"
     conversation = clean_conversation(conversation)
     prefill_data = model.prefill(conversation, max_length=request.max_length)
     decode_response = requests.post(
@@ -147,42 +147,42 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     return response
 
-@app.post("/enqueue")
-async def enqueue(request: ConversationRequest):
-    conn = psycopg2.connect(
-        dbname=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT")
-    )
-    try:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO inference_queue (conversation) VALUES (%s)", (request.conversation,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return {"status": "queued"}
-    except Exception as e:
-        logger.exception("DB insert failed")
-        raise HTTPException(status_code=500, detail="Failed to queue request")
+# @app.post("/enqueue")
+# async def enqueue(request: ConversationRequest):
+#     conn = psycopg2.connect(
+#         dbname=os.getenv("DB_NAME"),
+#         user=os.getenv("DB_USER"),
+#         password=os.getenv("DB_PASSWORD"),
+#         host=os.getenv("DB_HOST"),
+#         port=os.getenv("DB_PORT")
+#     )
+#     try:
+#         cursor = conn.cursor()
+#         cursor.execute("INSERT INTO inference_queue (conversation) VALUES (%s)", (request.conversation,))
+#         conn.commit()
+#         cursor.close()
+#         conn.close()
+#         return {"status": "queued"}
+#     except Exception as e:
+#         logger.exception("DB insert failed")
+#         raise HTTPException(status_code=500, detail="Failed to queue request")
 
-@app.get("/trigger_batch_inference")
-async def trigger_batch():
-    try:
-        from src.batch_jobs.run_batch_inference import main as batch_main
-        batch_main()
-        return {"status": "success", "message": "Batch inference triggered."}
-    except Exception as e:
-        logger.error(f"Batch inference failed: {e}")
-        raise HTTPException(status_code=500, detail="Batch processing failed.")
+# @app.get("/trigger_batch_inference")
+# async def trigger_batch():
+#     try:
+#         from src.batch_jobs.run_batch_inference import main as batch_main
+#         batch_main()
+#         return {"status": "success", "message": "Batch inference triggered."}
+#     except Exception as e:
+#         logger.error(f"Batch inference failed: {e}")
+#         raise HTTPException(status_code=500, detail="Batch processing failed.")
 
-@app.get("/trigger_batch_inference_decoupled")
-async def trigger_batch_decoupled():
-    try:
-        from src.batch_jobs.run_batch_inference_decoupled import main as batch_main
-        batch_main()
-        return {"status": "success", "message": "Batch inference triggered."}
-    except Exception as e:
-        logger.error(f"Batch inference failed: {e}")
-        raise HTTPException(status_code=500, detail="Batch processing failed.")
+# @app.get("/trigger_batch_inference_decoupled")
+# async def trigger_batch_decoupled():
+#     try:
+#         from src.batch_jobs.run_batch_inference_decoupled import main as batch_main
+#         batch_main()
+#         return {"status": "success", "message": "Batch inference triggered."}
+#     except Exception as e:
+#         logger.error(f"Batch inference failed: {e}")
+#         raise HTTPException(status_code=500, detail="Batch processing failed.")
