@@ -1,4 +1,4 @@
-from datetime import datetime
+import os
 
 import hydra
 from loguru import logger
@@ -16,21 +16,21 @@ MODEL_CLASSES = {
     "t5": "text2cypher.finetuning.models.t5_model.T5NoteGenerationModel",
 }
 
-@hydra.main(version_base="1.3", config_path="./config", config_name="config")
 def train(cfg: DictConfig):
     setup_logger(cfg.logging.log_path)
     logger.info(f"Starting training pipeline")
 
-    safe_model_name = cfg.model.name.replace("/", "_")
+    env_folder = os.getenv("ENV", "no-env")
+    pipeline_run_id = os.getenv("PIPELINE_RUN_ID", "no-pipeline-id")
 
     datamodule = NoteChatDataModule(
         model_name=cfg.model.name,
+        source_data_path=cfg.data.source_data_path,
+        preprocessed_input_data_folder=cfg.data.preprocessed_input_data_folder,
+        env_folder=env_folder,
         batch_size=cfg.training.batch_size,
         max_length=cfg.model.max_length,
         num_workers=cfg.training.num_workers,
-        train_samples=cfg.data.train_samples,
-        val_samples=cfg.data.val_samples,
-        test_samples=cfg.data.test_samples,
         shuffle=cfg.data.shuffle,
         shuffle_seed=cfg.data.shuffle_seed,
     )
@@ -51,24 +51,26 @@ def train(cfg: DictConfig):
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Total model parameters: {total_params:,}")
 
-    now = datetime.now().strftime("%Y%m%d-%H%M%S")
+
     checkpoint_callback = ModelCheckpoint(
-        dirpath=cfg.training.checkpoint_dir,
-        filename=f"best-{safe_model_name}-peft{cfg.model.peft_method}-{now}-epoch{{epoch:02d}}-val_loss{{val_loss:.2f}}",
+        dirpath=os.path.join(cfg.training.model_artifact_dir, f"{pipeline_run_id}/checkpoints"),
+        filename=f"best_model",
         monitor="val_loss",
         mode="min",
         save_top_k=1,
         save_weights_only=True,
         auto_insert_metric_name=False,
     )
+    logger.debug(f"Checkpoint directory: {checkpoint_callback.dirpath}")
+    logger.debug(f"Checkpoint filename: {checkpoint_callback.filename}")
 
     callbacks = [
         checkpoint_callback,
         EarlyStopping(monitor="val_loss", patience=cfg.training.patience, mode="min"),
     ]
 
-    wandb.init(project=cfg.project_name, name=f"{cfg.model.name}-training")
-    wandb_logger = WandbLogger(project=cfg.project_name, log_model=True, save_dir=cfg.training.checkpoint_dir)
+    wandb.init(project=f"{cfg.project_name}-training-{env_folder}", name=f"{cfg.model.name}-{cfg.model.peft_method}", tags=[f"pipeline:{pipeline_run_id}"])
+    wandb_logger = WandbLogger(project=cfg.project_name, log_model=False)
     wandb_logger.experiment.config.update(dict(cfg))
 
     trainer = pl.Trainer(
@@ -83,10 +85,14 @@ def train(cfg: DictConfig):
     logger.info("Starting model training")
     trainer.fit(model, datamodule=datamodule)
     logger.success("Training completed successfully")
-    logger.info(f"Best model path: {checkpoint_callback.best_model_path}")
-    wandb_logger.experiment.config.update({"best_model_path": checkpoint_callback.best_model_path})
+
+    logger.info("Saving model in hf format")
+    hf_save_path = os.path.join(cfg.training.model_artifact_dir, f"{pipeline_run_id}/hf_model")
+    model.model.merge_and_unload().save_pretrained(hf_save_path)
+    model.tokenizer.save_pretrained(hf_save_path)
+    logger.success("Model saved successfully")
+
+    wandb_logger.experiment.summary["best_val_loss"] = trainer.callback_metrics["val_loss"].item()
+    wandb_logger.experiment.summary["best_epoch"] = trainer.current_epoch
+    wandb_logger.experiment.summary["sagemaker_pipeline_run_id"] = pipeline_run_id
     wandb.finish()
-
-
-if __name__ == "__main__":
-    train()
