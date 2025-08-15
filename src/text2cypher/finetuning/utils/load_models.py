@@ -1,4 +1,7 @@
 import importlib
+import os
+from urllib.parse import urlparse
+import boto3
 from loguru import logger
 
 MODEL_CLASSES = {
@@ -30,3 +33,22 @@ def load_model(model_ckpt, model_name, model_type, device, peft_method=None):
 
     model.to(device)
     return model
+
+
+def resolve_checkpoint_path(uri: str, local_dir: str = "/tmp/model") -> str:
+    """If `uri` is s3://, download to local_dir and return local path; otherwise return as-is."""
+    if not uri.startswith("s3://"):
+        return uri
+
+    os.makedirs(local_dir, exist_ok=True)
+
+    p = urlparse(uri)
+    bucket = p.netloc
+    key = p.path.lstrip("/")
+    filename = os.path.basename(key)
+    local_path = os.path.join(local_dir, filename)
+
+    s3 = boto3.client("s3")  # region will come from ECS metadata/env
+    s3.download_file(bucket, key, local_path)
+    return local_path
+

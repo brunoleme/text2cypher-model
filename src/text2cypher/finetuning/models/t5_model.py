@@ -10,6 +10,7 @@ from transformers.modeling_outputs import BaseModelOutput
 
 
 from text2cypher.finetuning.utils.text_utils import replace_first_dash
+from text2cypher.finetuning.utils.load_models import resolve_checkpoint_path
 from .base_model import BaseNoteGenerationModel
 
 
@@ -165,6 +166,8 @@ class T5NoteGenerationModel(BaseNoteGenerationModel):
         peft_method: Optional[str] = None,
     ) -> "T5NoteGenerationModel":
         logger.info(f"Loading model from checkpoint: {checkpoint_path}")
+
+        checkpoint_path = resolve_checkpoint_path(checkpoint_path)
 
         if not os.path.exists(checkpoint_path):
             raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
