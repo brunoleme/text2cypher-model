@@ -1,6 +1,7 @@
 import argparse
 import boto3
 import datetime
+import os
 
 
 def parse_args():
@@ -11,6 +12,7 @@ def parse_args():
     parser.add_argument("--instance-type", default="ml.m5.large", help="Instance type")
     parser.add_argument("--instance-count", type=int, default=1)
     parser.add_argument("--env", required=True, choices=["dev", "staging", "prod"], help="Environment")
+    parser.add_argument("--wandb-api-key", required=True, help="W&B API Key")
     return parser.parse_args()
 
 
@@ -27,11 +29,25 @@ def main():
         AlgorithmSpecification={
             "TrainingImage": args.image_uri,
             "TrainingInputMode": "File",
+            "ContainerEntrypoint": ["python", "scripts/train.py", "--config-path=src/text2cypher/finetuning/config", f"--config-name=config.{args.env}"],
         },
         RoleArn=args.role_arn,
-        InputDataConfig=[],
+        InputDataConfig=[
+            {
+                'ChannelName': 'training',
+                'DataSource': {
+                    'S3DataSource': {
+                        'S3DataType': 'S3Prefix',
+                        'S3Uri': f"s3://bl-portfolio-ml-sagemaker-source-data/notechat-dataset/notechat_dataset.csv",
+                        'S3DataDistributionType': 'FullyReplicated'
+                    }
+                },
+                'ContentType': 'application/json',
+                'InputMode': 'File'
+            }
+        ],
         OutputDataConfig={
-            "S3OutputPath": f"s3://your-sagemaker-bucket/output/{training_job_name}/"
+            "S3OutputPath": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/{training_job_name}/"
         },
         ResourceConfig={
             "InstanceType": args.instance_type,
@@ -40,7 +56,8 @@ def main():
         },
         StoppingCondition={"MaxRuntimeInSeconds": 3600},
         Environment={
-            "ENV": args.env
+            "ENV": args.env,
+            "WANDB_API_KEY": args.wandb_api_key
         },
     )
 
@@ -53,7 +70,12 @@ def main():
     model_artifact_uri = desc["ModelArtifacts"]["S3ModelArtifacts"]
 
     # Output for GitHub Actions
-    print(f"::set-output name=model_artifact_s3_uri::{model_artifact_uri}")
+    with open(os.environ["GITHUB_ENV"], "a") as f:
+        f.write(f"MODEL_ARTIFACT_S3_URI={model_artifact_uri}\n")
+
+    # Write to GITHUB_OUTPUT for outputs (required for 'outputs' keyword)
+    with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+        f.write(f"model_artifact_s3_uri={model_artifact_uri}\n")
     print(model_artifact_uri)
 
 

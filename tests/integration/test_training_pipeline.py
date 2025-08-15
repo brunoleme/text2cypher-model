@@ -1,38 +1,24 @@
-import pytest
-import pytorch_lightning as pl
+import os
+from pathlib import Path
+import hydra
+from text2cypher.finetuning.train import train
+from tests.utils import run_preprocessing_for_tests
 
-from text2cypher.finetuning.data.notechat_dataset import NoteChatDataModule
-from text2cypher.finetuning.models.t5_model import T5NoteGenerationModel
 
-@pytest.mark.integration
-def test_training_pipeline_runs_and_validates():
-    datamodule = NoteChatDataModule(
-        model_name="t5-small",
-        batch_size=2,
-        max_length=128,
-        num_workers=0,
-        train_samples=4,
-        val_samples=2,
-    )
+def test_training_pipeline():
+    config_name = f"config.test"
+    config_path = os.path.abspath("tests/resources/config")
 
-    model = T5NoteGenerationModel(
-        model_name="t5-small",
-        model_type="t5",
-        learning_rate=1e-4,
-        use_quantization=False,
-    )
+    with hydra.initialize_config_dir(config_dir=config_path):
+        cfg = hydra.compose(config_name=config_name)
 
-    trainer = pl.Trainer(
-        max_epochs=1,
-        accelerator="cpu",
-        enable_progress_bar=False,
-        logger=False,
-    )
+    run_preprocessing_for_tests()
 
-    trainer.fit(model, datamodule=datamodule)
+    env_folder = "dev"
+    os.environ["ENV"] = env_folder
+    os.environ["PIPELINE_RUN_ID"] = "pipeline_id"
+    train(cfg)
 
-    assert trainer.global_step > 0  # confirms training loop ran
-
-    # Optional: run validation manually and check metrics
-    val_metrics = trainer.validate(model=model, datamodule=datamodule)
-    assert "val_loss" in val_metrics[0]
+    ckpts = list(Path(cfg.training.model_artifact_dir + "/pipeline_id/checkpoints").rglob("*.ckpt"))
+    assert len(ckpts) > 0
+    assert ckpts[0].stat().st_size > 0

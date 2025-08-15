@@ -2,6 +2,7 @@ import os
 from functools import partial
 from typing import Dict, Optional
 
+import pandas as pd
 import pytorch_lightning as pl
 from datasets import load_dataset
 from loguru import logger
@@ -14,34 +15,34 @@ from text2cypher.finetuning.utils.text_utils import replace_first_dash
 class NoteChatDataModule(pl.LightningDataModule):
     def __init__(
         self,
+        source_data_path: str,
+        preprocessed_input_data_folder: str,
+        env_folder: str,
         model_name: str,
         batch_size: int = 8,
         max_length: int = 128,
         max_source_length: int = 384,
         max_target_length: int = 128,
+        num_workers: int = 4,
         train_samples: int = -1,
         val_samples: int = -1,
         test_samples: int = -1,
-        train_split: float = 0.8,
-        val_split: float = 0.1,
-        test_split: float = 0.1,
-        num_workers: int = 4,
         shuffle: bool = True,
         shuffle_seed: int = 42,
     ):
         super().__init__()
         self.model_name = model_name
+        self.source_data_path = source_data_path
+        self.preprocessed_input_data_folder = preprocessed_input_data_folder
+        self.env_folder = env_folder
         self.batch_size = batch_size
         self.max_length = max_length
         self.max_source_length = max_source_length
         self.max_target_length = max_target_length
+        self.num_workers = num_workers
         self.train_samples = train_samples
         self.val_samples = val_samples
         self.test_samples = test_samples
-        self.train_split = train_split
-        self.val_split = val_split
-        self.test_split = test_split
-        self.num_workers = num_workers
         self.shuffle = shuffle
         self.shuffle_seed = shuffle_seed
 
@@ -68,44 +69,46 @@ class NoteChatDataModule(pl.LightningDataModule):
             return_tensors="pt"
         )
 
-    def prepare_data(self):
-        logger.info("Downloading NoteChat dataset if needed")
-        load_dataset("akemiH/NoteChat")
+    def load_data(self):
+        filename = os.path.basename(self.source_data_path)
+
+        train_filename = filename.replace(".csv", "_train.parquet")
+        val_filename = filename.replace(".csv", "_val.parquet")
+        test_filename = filename.replace(".csv", "_test.parquet")
+
+        input_train_path = f"{self.preprocessed_input_data_folder}/preprocessed/{train_filename}"
+        logger.info(f"Reading train parquet data from S3: {input_train_path}")
+        self.train_dataset = load_dataset("parquet", data_files=input_train_path)["train"]
+        self.train_dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
+        logger.info(f"Loaded {len(self.train_dataset)} train rows from S3.")
+
+        input_val_path = f"{self.preprocessed_input_data_folder}/preprocessed/{val_filename}"
+        logger.info(f"Reading valid parquet data from S3: {input_val_path}")
+        self.val_dataset = load_dataset("parquet", data_files=input_val_path)["train"]
+        self.val_dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
+        logger.info(f"Loaded {len(self.val_dataset)} valid rows from S3.")
+
+        input_test_path = f"{self.preprocessed_input_data_folder}/preprocessed/{test_filename}"
+        logger.info(f"Reading test parquet data from S3: {input_test_path}")
+        self.test_dataset = load_dataset("parquet", data_files=input_test_path)["train"]
+        self.test_dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
+        logger.info(f"Loaded {len(self.test_dataset)} test rows from S3.")
+
+
 
     def setup(self, stage: Optional[str] = None):
         logger.info(f"Setting up dataset for stage: {stage}")
-        full_dataset = load_dataset("akemiH/NoteChat")["train"]
-        logger.debug(f"Dataset columns: {full_dataset.column_names}")
 
-        n = len(full_dataset)
-        assert abs(self.train_split + self.val_split + self.test_split - 1.0) < 1e-6, \
-            "Train/val/test splits must sum to 1.0"
+        self.load_data()
 
-        train_end = int(n * self.train_split)
-        val_end = train_end + int(n * self.val_split)
+        if self.train_samples > 0 and self.train_samples < len(self.train_dataset):
+            self.train_dataset = self.train_dataset.shuffle(seed=self.shuffle_seed).select(range(self.train_samples))
 
-        self.train_dataset = full_dataset.select(range(0, train_end))
-        self.val_dataset = full_dataset.select(range(train_end, val_end))
-        self.test_dataset = full_dataset.select(range(val_end, n))
+        if self.val_samples > 0 and self.val_samples < len(self.val_dataset):
+            self.val_dataset = self.val_dataset.shuffle(seed=self.shuffle_seed).select(range(self.val_samples))
 
-        if self.train_samples > 0:
-            self.train_dataset = self.train_dataset.select(
-                range(min(self.train_samples, len(self.train_dataset)))
-            )
-
-        if self.val_samples > 0:
-            self.val_dataset = self.val_dataset.select(
-                range(min(self.val_samples, len(self.val_dataset)))
-            )
-
-        if self.test_samples > 0:
-            self.test_dataset = self.test_dataset.select(
-                range(min(self.test_samples, len(self.test_dataset)))
-            )
-
-        self._log_dataset_statistics(self.train_dataset, "train")
-        self._log_dataset_statistics(self.val_dataset, "validation")
-        self._log_dataset_statistics(self.test_dataset, "test")
+        if self.test_samples > 0 and self.test_samples < len(self.test_dataset):
+            self.test_dataset = self.test_dataset.shuffle(seed=self.shuffle_seed).select(range(self.test_samples))
 
         logger.info(
             f"Train size: {len(self.train_dataset)}, "
@@ -113,91 +116,9 @@ class NoteChatDataModule(pl.LightningDataModule):
             f"Test size: {len(self.test_dataset)}"
         )
 
-    def _log_dataset_statistics(self, dataset, split_name: str) -> None:
-        conv_lengths = [len(x.split()) for x in dataset["conversation"]]
-        note_lengths = [len(x.split()) for x in dataset["data"]]
-
-        logger.info(f"{split_name.capitalize()} set statistics:")
-        logger.info(
-            f"Conversation lengths - Min: {min(conv_lengths)}, "
-            f"Max: {max(conv_lengths)}, "
-            f"Avg: {sum(conv_lengths)/len(conv_lengths):.2f}"
-        )
-        logger.info(
-            f"Note lengths - Min: {min(note_lengths)}, "
-            f"Max: {max(note_lengths)}, "
-            f"Avg: {sum(note_lengths)/len(note_lengths):.2f}"
-        )
-
-    @staticmethod
-    def format_conversation(conversation: str) -> str:
-        turns = conversation.split("\n")
-        formatted_turns = []
-        for turn in turns:
-            if turn.startswith("Doctor:"):
-                formatted_turns.append(f"<speaker>Doctor:</speaker>{turn[7:]}")
-            elif turn.startswith("Patient:"):
-                formatted_turns.append(f"<speaker>Patient:</speaker>{turn[8:]}")
-        return f"<conversation>{' '.join(formatted_turns)}</conversation>"
-
-    @staticmethod
-    def preprocess_function(
-        examples: Dict,
-        tokenizer: AutoTokenizer,
-        max_source_length: int,
-        max_target_length: int
-    ) -> Dict:
-        conversations = examples["conversation"]
-        clinical_notes = examples["data"]
-
-        formatted_conversations = [
-            f"summarize: {NoteChatDataModule.format_conversation(conv)}"
-            for conv in conversations
-        ]
-
-        model_inputs = tokenizer(
-            formatted_conversations,
-            padding=False,
-            max_length=max_source_length,
-            truncation=True,
-        )
-
-        with tokenizer.as_target_tokenizer():
-            labels = tokenizer(
-                clinical_notes,
-                padding=False,
-                max_length=max_target_length,
-                truncation=True,
-            )
-
-        model_inputs["labels"] = labels["input_ids"]
-        model_inputs["source_lengths"] = [len(x) for x in model_inputs["input_ids"]]
-        model_inputs["target_lengths"] = [len(x) for x in labels["input_ids"]]
-        return model_inputs
-
     def _create_dataloader(self, dataset, shuffle: bool = False) -> DataLoader:
-        preprocess_fn = partial(
-            self.preprocess_function,
-            tokenizer=self.tokenizer,
-            max_source_length=self.max_source_length,
-            max_target_length=self.max_target_length,
-        )
-
-        processed_dataset = dataset.map(
-            preprocess_fn,
-            remove_columns=dataset.column_names,
-            desc="Processing data...",
-            batched=True,
-            batch_size=1000,
-            num_proc=None if os.environ.get("TOKENIZERS_PARALLELISM") == "false" else 4,
-        )
-
-        if "source_lengths" in processed_dataset.features:
-            processed_dataset = processed_dataset.sort("source_lengths")
-            processed_dataset = processed_dataset.remove_columns(["source_lengths", "target_lengths"])
-
         return DataLoader(
-            processed_dataset,
+            dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=shuffle,
