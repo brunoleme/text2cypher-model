@@ -9,6 +9,7 @@ def parse_args():
     parser.add_argument("--inference-image-uri", required=True, help="ECR inference image URI")
     parser.add_argument("--role-arn", required=True, help="SageMaker Execution Role ARN")
     parser.add_argument("--job-name", required=True, help="Training Job Name")
+    parser.add_argument("--pipeline-run-id", required=True, help="Pipeline UUID")
     parser.add_argument("--env", required=True, choices=["dev", "staging", "prod"], help="Environment")
     parser.add_argument("--wandb-api-key", required=True, help="W&B API Key")
     parser.add_argument("--openai-api-key", required=True, help="Open AI API Key")
@@ -25,14 +26,12 @@ def parse_args():
 def main():
     args = parse_args()
 
-    pipeline_run_uuid = str(uuid.uuid4())
-
-    pipeline = create_pipeline(role_arn=args.role_arn, pipeline_run_uuid=pipeline_run_uuid)
+    pipeline = create_pipeline(role_arn=args.role_arn, pipeline_run_uuid=args.pipeline_run_id)
     pipeline.upsert(role_arn=args.role_arn)
 
     execution = pipeline.start(
         parameters={
-            "PipelineRunID": pipeline_run_uuid,
+            "PipelineRunID": args.pipeline_run_id,
             "ImageURI": args.image_uri,
             "InferenceImageURI": args.inference_image_uri,
             # "RoleARN": args.role_arn,
@@ -43,7 +42,7 @@ def main():
             "InputDataFolderURI": "s3://bl-portfolio-ml-sagemaker-source-data/notechat-dataset/",
             "PreprocessedOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/input/preprocessed",
             "TrainingOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts",
-            "PackagedModelS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts/{pipeline_run_uuid}/model.tar.gz",
+            "PackagedModelS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts/{args.pipeline_run_id}/model.tar.gz",
             "PreprocessingInstanceType": args.preprocessing_instance_type,
             "PreprocessingInstanceCount": args.preprocessing_instance_count,
             "TrainingInstanceType": args.training_instance_type,
