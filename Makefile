@@ -105,6 +105,7 @@ DEPLOYMENT_INSTANCE_TYPE ?= ml.g4dn.xlarge
 sagemaker-pipeline-trigger:
 	@echo "Running SageMaker trigger..."
 	python .github/scripts/trigger_sagemaker_pipeline.py \
+		--pipeline-run-id $(PIPELINE_RUN_ID) \
 		--image-uri $(ECR_REPOSITORY_URI):$(IMAGE_TAG) \
 		--inference-image-uri $(ECR_REPOSITORY_URI):$(INFERENCE_IMAGE_TAG) \
 		--role-arn $(SAGEMAKER_ROLE_ARN) \
