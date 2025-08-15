@@ -1,0 +1,48 @@
+# .github/workflows/terraform-destroy.yml
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment"
+        type: choice
+        options: [dev, staging, prod]
+        default: dev
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/envs/${{ github.event.inputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform init
+        run: terraform init -reconfigure
+
+      # Tip: some modules validate vars at plan time; pass the same ones you use on apply
+      - name: Terraform destroy
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          # these only matter if your modules require them at plan time:
+          TF_VAR_inference_image_uri:      ${{ env.ECR_REPOSITORY_URI }}:inference-${{ github.event.inputs.env }}-candidate
+          TF_VAR_inference_image_v2_uri:   ${{ env.ECR_REPOSITORY_URI }}:inference-${{ github.event.inputs.env }}-candidate
+          TF_VAR_model_path:               s3://bl-portfolio-ml-sagemaker-${{ github.event.inputs.env }}/dummy
+        run: |
+          terraform destroy -auto-approve
