@@ -7,17 +7,10 @@ on:
         description: "Environment (e.g., dev)"
         required: true
         default: dev
-      aws_region:
-        description: "AWS Region"
-        required: true
-        default: us-east-1
       instance_type:
         description: "EC2 Instance Type"
         required: true
         default: g4dn.xlarge
-      ssh_key_name:
-        description: "EC2 Key Pair Name"
-        required: true
 
 jobs:
   provision:
@@ -25,6 +18,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      EC2_SSH_KEY_NAME: ${{ secrets.EC2_SSH_KEY_NAME }}
 
     steps:
       - name: Checkout
@@ -34,7 +30,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
-          aws-region: ${{ github.event.inputs.aws_region }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -55,9 +51,9 @@ jobs:
         run: |
           terraform plan \
             -var="environment=${{ github.event.inputs.environment }}" \
-            -var="aws_region=${{ github.event.inputs.aws_region }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
-            -var="ssh_key_name=${{ github.event.inputs.ssh_key_name }}"
+            -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}"
 
       - name: Terraform Apply
         if: ${{ github.event.inputs.auto_apply == 'true' || true }}
@@ -67,9 +63,9 @@ jobs:
         run: |
           terraform apply \
             -var="environment=${{ github.event.inputs.environment }}" \
-            -var="aws_region=${{ github.event.inputs.aws_region }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
-            -var="ssh_key_name=${{ github.event.inputs.ssh_key_name }}" \
+            -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
             -auto-approve
 
       - name: Output Instance Info
