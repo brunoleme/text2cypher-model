@@ -1,17 +1,28 @@
 #Dockerfile.inference
-FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
 
 WORKDIR /app
 
-# Install uv
+# Install uv and awscli
 RUN pip install --upgrade pip && \
-    pip install uv
+    pip install uv awscli
 
 # Copy project files
 COPY . .
 
+# Install specific versions to avoid compatibility issues
+# Note: bitsandbytes >= 0.43.2 required for 4-bit quantization support
+RUN pip install --no-cache-dir \
+    peft==0.11.1 \
+    bitsandbytes==0.43.2 \
+    transformers==4.55.2 \
+    boto3
+
 # Install project dependencies in editable mode
 RUN uv pip install --system -e .
+
+# Create model directory for Hugging Face models
+RUN mkdir -p /app/models/hf_model
 
 # Set environment variable for Python module resolution
 ENV PYTHONPATH=/app

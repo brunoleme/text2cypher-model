@@ -72,3 +72,40 @@ htmlcov/
 
 # MyPy
 .mypy_cache/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# Debug files - don't commit
+tests/resources/artifacts/staging/
+*.ckpt
+wandb_export_*.csv
+
+# Large CSV files
+source_data.csv
+game_recaps_with_summaries.csv
+tests/resources/source_data/game_recaps_with_summaries.csv
+
+# Large model artifacts
+tests/resources/artifacts/pipeline_id/
+tests/resources/artifacts/best_model*.ckpt
+
+# Debug and temporary files
+debug_output/
+config.debug.*.yaml
+debug_*.py
+final_inference_example.py
+
+# Additional exclusions
+*.icloud
+.ruff_cache/
+
+# Parquet data (generated samples and preprocessed)
+tests/resources/preprocessed/*.parquet
+src/text2cypher/finetuning/data/*.parquet
+tests/resources/source_data/*.parquet
+tests/resources/text2cypher_*.parquet

@@ -1,0 +1,143 @@
+name: Manual ECS Deployment
+
+# This workflow deploys to ECS for production use
+# For debugging/validation, use "Manual EC2 Deployment" instead
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      pipeline_id:
+        description: 'SageMaker Pipeline ID to deploy'
+        required: true
+        type: string
+      stable_image_tag:
+        description: 'ECR image tag for stable version (V1)'
+        required: false
+        type: string
+        default: ''
+      candidate_image_tag:
+        description: 'ECR image tag for candidate version (V2) - only used for prod canary'
+        required: false
+        type: string
+        default: ''
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: make install
+
+    - name: Run inference tests
+      run: make test-inference ENV=${{ github.event.inputs.environment }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Construct model path from pipeline ID
+      id: set-model-path
+      run: |
+        PIPELINE_ID="${{ github.event.inputs.pipeline_id }}"
+        ENVIRONMENT="${{ github.event.inputs.environment }}"
+        # Use Hugging Face model directory instead of .ckpt file
+        MODEL_PATH="s3://text2cypher-model-${ENVIRONMENT}/output/artifacts/${PIPELINE_ID}/hf_model"
+        echo "MODEL_PATH=$MODEL_PATH" >> $GITHUB_OUTPUT
+        echo "Constructed model path: $MODEL_PATH"
+
+    - name: Build, tag, and push inference image
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+        MODEL_PATH: ${{ steps.set-model-path.outputs.MODEL_PATH }}
+      run: |
+        # Build and push the inference image
+        docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG \
+          -f Dockerfile.inference .
+        docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Set image tags
+      id: set-image-tags
+      run: |
+        # Use provided tags or fall back to commit SHA
+        STABLE_TAG="${{ github.event.inputs.stable_image_tag }}"
+        CANDIDATE_TAG="${{ github.event.inputs.candidate_image_tag }}"
+        
+        if [ -z "$STABLE_TAG" ]; then
+          STABLE_TAG="${GITHUB_SHA::7}"
+        fi
+        
+        if [ -z "$CANDIDATE_TAG" ]; then
+          CANDIDATE_TAG="${GITHUB_SHA::7}-candidate"
+        fi
+        
+        echo "STABLE_TAG=$STABLE_TAG" >> $GITHUB_OUTPUT
+        echo "CANDIDATE_TAG=$CANDIDATE_TAG" >> $GITHUB_OUTPUT
+        echo "Using stable image tag: $STABLE_TAG"
+        echo "Using candidate image tag: $CANDIDATE_TAG"
+
+    - name: Deploy ECS with Terraform
+      env:
+        TF_VAR_inference_image_uri: ${{ env.ECR_REPOSITORY_URI }}:${{ steps.set-image-tags.outputs.STABLE_TAG }}
+        TF_VAR_inference_image_v2_uri: ${{ env.ECR_REPOSITORY_URI }}:${{ steps.set-image-tags.outputs.CANDIDATE_TAG }}
+        TF_VAR_model_path: ${{ steps.set-model-path.outputs.MODEL_PATH }}
+        TF_VAR_aws_region: ${{ env.AWS_REGION }}
+        TF_VAR_hf_token: ${{ secrets.HF_TOKEN }}
+      run: |
+        cd terraform/envs/${{ github.event.inputs.environment }}
+        terraform init -reconfigure
+        terraform apply -auto-approve
+
+    - name: Verify ECS deployment
+      run: |
+        echo "🎉 ECS Deployment completed successfully!"
+        echo "Environment: ${{ github.event.inputs.environment }}"
+        echo "Pipeline ID: ${{ github.event.inputs.pipeline_id }}"
+        echo "Model Path: ${{ steps.set-model-path.outputs.MODEL_PATH }}"
+        echo ""
+        echo "📦 Deployed Images:"
+        echo "  Stable (V1): ${{ env.ECR_REPOSITORY_URI }}:${{ steps.set-image-tags.outputs.STABLE_TAG }}"
+        echo "  Candidate (V2): ${{ env.ECR_REPOSITORY_URI }}:${{ steps.set-image-tags.outputs.CANDIDATE_TAG }}"
+        echo ""
+        echo "🔗 ECS Service deployed with Application Load Balancer"
+        echo "📊 Check AWS ECS Console for service status and logs"
+        if [ "${{ github.event.inputs.environment }}" = "prod" ]; then
+          echo "🚦 Canary deployment active: 90% V1, 10% V2"
+        fi
+

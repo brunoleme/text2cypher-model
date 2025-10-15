@@ -9,18 +9,16 @@ from loguru import logger
 from typing import Dict
 import wandb
 
-from text2cypher.finetuning.data.notechat_dataset import NoteChatDataModule
+from text2cypher.finetuning.data.text2cypher_dataset import Text2CypherDataModule
 from text2cypher.finetuning.utils.load_models import load_model
 from text2cypher.finetuning.eval.metrics import (
-    calculate_rouge, calculate_bleu,
-    calculate_bertscore,
-    calculate_factual_consistency, calculate_relevance,
-    calculate_completeness, calculate_conciseness, calculate_clarity,
-    compute_group_metrics, calculate_average_latency, calculate_model_size_in_params
+    calculate_rouge, calculate_bleu, calculate_bertscore,
+    calculate_exact_match, calculate_cypher_lint_rate,
+    compute_group_metrics_from_rows, calculate_average_latency, calculate_model_size_in_params
 )
 
-def setup_dataloader(cfg, samples, env_folder):
-    data_module = NoteChatDataModule(
+def load_rows(cfg, samples, env_folder):
+    data_module = Text2CypherDataModule(
         model_name=cfg.model.name,
         preprocessed_input_data_folder=cfg.data.preprocessed_input_data_folder,
         source_data_path=cfg.data.source_data_path,
@@ -35,13 +33,19 @@ def setup_dataloader(cfg, samples, env_folder):
         shuffle_seed=cfg.data.shuffle_seed,
     )
     data_module.setup()
-    return data_module.test_dataloader()
+    # Reconstruct rows from dataset columns
+    ds = data_module.test_dataset
+    rows = [{
+        "question": ds[i]["question"],
+        "schema": ds[i]["schema"],
+        "cypher": ds[i]["cypher"],
+    } for i in range(len(ds))]
+    return rows
 
-def run_metric_evaluation(title, cfg, dataloader_samples, metrics_dict, model, device, env_folder):
+def run_metric_evaluation(title, cfg, sample_count, metrics_dict, model, env_folder):
     logger.info(f"Starting {title} evaluation")
-    dataloader = setup_dataloader(cfg, dataloader_samples, env_folder)
-    results_df = compute_group_metrics(model, dataloader, device, cfg.model.max_length, metrics_dict)
-    del dataloader
+    rows = load_rows(cfg, sample_count, env_folder)
+    results_df = compute_group_metrics_from_rows(model, rows, cfg.model.max_length, metrics_dict)
     gc.collect()
     return results_df
 
@@ -56,18 +60,12 @@ def evaluate_model(cfg: DictConfig):
 
         logger.info("Defining evaluation metrics to be computed")
         lexical_metrics_dict = {
-            "rouge_score": calculate_rouge,
+            "exact_match": calculate_exact_match,
             "bleu_score": calculate_bleu,
         }
         semantical_metrics_dict = {
-            "bert_score": calculate_bertscore
-        }
-        ai_as_a_judge_metrics_dict = {
-            "factual_consistency": calculate_factual_consistency,
-            "relevance": calculate_relevance,
-            "completeness": calculate_completeness,
-            "conciseness": calculate_conciseness,
-            "clarity": calculate_clarity,
+            "bert_score": calculate_bertscore,
+            "cypher_lint_rate": calculate_cypher_lint_rate,
         }
 
         logger.info("Loading model from checkpoint")
@@ -87,26 +85,18 @@ def evaluate_model(cfg: DictConfig):
 
         # Lexical metrics #def run_metric_evaluation(title, cfg, dataloader_samples, metrics_dict, model, device):
         logger.info("Computing lexical metrics")
-        lexical_metrics_results_df = run_metric_evaluation(
-            "lexical metrics", cfg, cfg.evaluation.test_samples_lexical_metrics, lexical_metrics_dict, model, device, env_folder
-        )
+        lexical_metrics_results_df = run_metric_evaluation("lexical metrics", cfg, cfg.evaluation.test_samples_lexical_metrics, lexical_metrics_dict, model, env_folder)
         results.append(lexical_metrics_results_df)
 
         logger.info("Computing semantic metrics")
-        semantical_metrics_results_df = run_metric_evaluation(
-            "semantical metrics", cfg, cfg.evaluation.test_samples_semantic_metrics, semantical_metrics_dict, model, device, env_folder
-        )
+        semantical_metrics_results_df = run_metric_evaluation("semantical metrics", cfg, cfg.evaluation.test_samples_semantic_metrics, semantical_metrics_dict, model, env_folder)
         results.append(semantical_metrics_results_df)
 
-        logger.info("Computing AI as a Judge metrics")
-        ai_as_a_judge_metrics_results_df = run_metric_evaluation(
-            "ai as a judge metrics", cfg, cfg.evaluation.test_samples_ai_as_judge_metrics, ai_as_a_judge_metrics_dict, model, device, env_folder
-        )
-        results.append(ai_as_a_judge_metrics_results_df)
+        # Skipping AI-as-a-judge for now in text2cypher baseline (no LLM dependency)
 
         logger.info("Computing system metrics")
-        dataloader = setup_dataloader(cfg, cfg.evaluation.test_samples_semantic_metrics, env_folder)
-        latency = calculate_average_latency(model, dataloader, cfg.model.max_length)
+        rows = load_rows(cfg, cfg.evaluation.test_samples_semantic_metrics, env_folder)
+        latency = calculate_average_latency(model, rows, cfg.model.max_length)
         size_params = calculate_model_size_in_params(model)
         system_metrics_df = pd.DataFrame({
             "model_size_params": [size_params],
@@ -114,7 +104,7 @@ def evaluate_model(cfg: DictConfig):
         })
         results.append(system_metrics_df)
 
-        del dataloader, model
+        del model
         gc.collect()
 
         model_metrics_df = pd.concat(results, axis=1)

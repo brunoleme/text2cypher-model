@@ -1,0 +1,140 @@
+# .github/workflows/cleanup-ecs.yaml
+name: Cleanup ECS Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment"
+        type: choice
+        options: [dev, staging, prod]
+        default: dev
+
+concurrency:
+  group: terraform-${{ github.event.inputs.env }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+
+jobs:
+  cleanup-ecs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/envs/${{ github.event.inputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Pre-cleanup scale-down (ECS + ASG)
+        timeout-minutes: 25  # Allow 25 minutes for pre-destroy cleanup
+        env:
+          CLUSTER: text2cypher-${{ github.event.inputs.env }}-cluster
+          SERVICE: text2cypher-${{ github.event.inputs.env }}-v1-service
+        run: |
+          set -euxo pipefail
+
+          # 1) Scale ECS service to 0 (ignore if missing)
+          if aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query 'services[0].status' --output text 2>/dev/null | grep -q ACTIVE; then
+            echo "Scaling ECS service $SERVICE to 0..."
+            aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --desired-count 0 || true
+            # Wait until the service is stable at 0
+            echo "Waiting for ECS service to reach 0 tasks..."
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE" || true
+          fi
+
+          # 2) Stop any remaining ECS tasks
+          echo "Stopping any remaining ECS tasks..."
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --query 'taskArns[]' --output text)
+          if [ -n "$TASKS" ]; then
+            for TASK in $TASKS; do
+              aws ecs stop-task --cluster "$CLUSTER" --task "$TASK" || true
+            done
+            # Wait for tasks to stop
+            sleep 30
+          fi
+
+          # 3) Disable capacity provider to prevent new instances
+          echo "Disabling ECS capacity provider..."
+          CAPACITY_PROVIDER="${CLUSTER}-gpu"
+          if aws ecs describe-capacity-providers --capacity-providers "$CAPACITY_PROVIDER" --query 'capacityProviders[0].status' --output text 2>/dev/null | grep -q ACTIVE; then
+            aws ecs put-cluster-capacity-providers --cluster "$CLUSTER" --capacity-providers [] --default-capacity-provider-strategy [] || true
+            echo "Capacity provider disabled"
+          fi
+
+          # 4) Find GPU ASGs for this env (handles multiple, if any)
+          ASGS=$(aws autoscaling describe-auto-scaling-groups \
+            --query 'AutoScalingGroups[?contains(AutoScalingGroupName, `text2cypher-''${{ github.event.inputs.env }}''-cluster`) && contains(AutoScalingGroupName, `gpu-asg`)].AutoScalingGroupName' \
+            --output text)
+
+          for ASG in $ASGS; do
+            # Scale to 0
+            aws autoscaling update-auto-scaling-group --auto-scaling-group-name "$ASG" --min-size 0 --desired-capacity 0 || true
+
+            # Terminate remaining instances and wait for termination to complete
+            INSTANCES=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names "$ASG" \
+              --query 'AutoScalingGroups[0].Instances[].InstanceId' --output text)
+
+            for ID in $INSTANCES; do
+              aws autoscaling terminate-instance-in-auto-scaling-group \
+                --instance-id "$ID" --no-should-decrement-desired-capacity || true
+            done
+
+            # Poll until ASG has no instances left (handles Terminating:Wait/Proceed)
+            # GPU instances can take 15+ minutes to terminate, so we wait longer
+            echo "Waiting for ASG $ASG instances to terminate..."
+            for i in $(seq 1 120); do  # 120 * 10s = 20 minutes max
+              LEFT=$(aws autoscaling describe-auto-scaling-groups \
+                --auto-scaling-group-names "$ASG" \
+                --query 'length(AutoScalingGroups[0].Instances)' --output text)
+              echo "ASG $ASG: $LEFT instances remaining (attempt $i/120)"
+              [ "$LEFT" = "0" ] && break
+              sleep 10
+            done
+            
+            # Final check - if instances still exist, force terminate them
+            FINAL_LEFT=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names "$ASG" \
+              --query 'length(AutoScalingGroups[0].Instances)' --output text)
+            if [ "$FINAL_LEFT" != "0" ]; then
+              echo "Warning: $FINAL_LEFT instances still exist in ASG $ASG after 20 minutes"
+              echo "Proceeding with Terraform destroy - it will handle the cleanup"
+            else
+              echo "Successfully terminated all instances in ASG $ASG"
+            fi
+          done
+
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform init
+        run: terraform init -reconfigure
+
+      # Tip: some modules validate vars at plan time; pass the same ones you use on apply
+      - name: Terraform cleanup ECS infrastructure
+        timeout-minutes: 30  # Allow 30 minutes for cleanup (GPU instances can be slow)
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          # these only matter if your modules require them at plan time:
+          TF_VAR_inference_image_uri:      ${{ env.ECR_REPOSITORY_URI }}:inference-${{ github.event.inputs.env }}-candidate
+          TF_VAR_inference_image_v2_uri:   ${{ env.ECR_REPOSITORY_URI }}:inference-${{ github.event.inputs.env }}-candidate
+          TF_VAR_model_path:               s3://text2cypher-model-${{ github.event.inputs.env }}/dummy
+        run: |
+          # Set longer timeout for ASG operations
+          export TF_CLI_ARGS="-var=aws_region=${{ env.AWS_REGION }}"
+          terraform destroy -auto-approve
+          
+      - name: Verify ECS cleanup
+        run: |
+          echo "🧹 ECS cleanup completed for environment: ${{ github.event.inputs.env }}"
+          echo "All ECS services, clusters, and associated resources have been destroyed."
+
