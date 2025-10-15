@@ -47,6 +47,6 @@ variable "ami_id" {
 variable "ami_name_filter" {
   description = "AMI name wildcard to discover DLAMI PyTorch"
   type        = string
-  default     = "Deep Learning AMI GPU PyTorch * (Ubuntu 22.04) *"
+  default     = "Deep Learning AMI GPU PyTorch *"
 }
 

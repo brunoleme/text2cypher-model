@@ -45,6 +45,16 @@ data "aws_ami" "gpu_ami" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+
+  # Mirror NBA by constraining to GPU-enabled images
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
 }
 
 resource "aws_vpc" "main" {
