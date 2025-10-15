@@ -20,3 +20,15 @@ variable "ssh_key_name" {
   type        = string
 }
 
+variable "use_existing_instance_profile" {
+  description = "If true, use an existing IAM instance profile instead of creating one"
+  type        = bool
+  default     = false
+}
+
+variable "existing_instance_profile_name" {
+  description = "Existing IAM instance profile name to attach to EC2 when use_existing_instance_profile=true"
+  type        = string
+  default     = ""
+}
+
