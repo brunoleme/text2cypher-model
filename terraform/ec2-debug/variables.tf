@@ -32,3 +32,21 @@ variable "existing_instance_profile_name" {
   default     = ""
 }
 
+variable "attach_instance_profile" {
+  description = "Attach an IAM instance profile to the EC2 instance"
+  type        = bool
+  default     = false
+}
+
+variable "ami_id" {
+  description = "Optional explicit AMI ID to use (overrides discovery)"
+  type        = string
+  default     = ""
+}
+
+variable "ami_name_filter" {
+  description = "AMI name wildcard to discover DLAMI PyTorch"
+  type        = string
+  default     = "Deep Learning AMI GPU PyTorch *"
+}
+
