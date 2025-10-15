@@ -32,3 +32,9 @@ variable "existing_instance_profile_name" {
   default     = ""
 }
 
+variable "attach_instance_profile" {
+  description = "Attach an IAM instance profile to the EC2 instance"
+  type        = bool
+  default     = false
+}
+

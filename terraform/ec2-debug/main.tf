@@ -125,7 +125,8 @@ resource "aws_security_group" "ec2_sg" {
 }
 
 resource "aws_iam_role" "ec2_role" {
-  name = "${var.environment}-ec2-debug-role-${random_id.suffix.hex}"
+  count = var.attach_instance_profile ? 1 : 0
+  name  = "${var.environment}-ec2-debug-role-${random_id.suffix.hex}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -142,8 +143,9 @@ resource "aws_iam_role" "ec2_role" {
 }
 
 resource "aws_iam_role_policy" "ec2_policy" {
-  name = "${var.environment}-ec2-debug-policy-${random_id.suffix.hex}"
-  role = aws_iam_role.ec2_role.id
+  count = var.attach_instance_profile ? 1 : 0
+  name  = "${var.environment}-ec2-debug-policy-${random_id.suffix.hex}"
+  role  = aws_iam_role.ec2_role[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -174,9 +176,9 @@ resource "aws_iam_role_policy" "ec2_policy" {
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
-  count = var.use_existing_instance_profile ? 0 : 1
+  count = var.attach_instance_profile ? 1 : 0
   name  = "${var.environment}-ec2-debug-profile-${random_id.suffix.hex}"
-  role  = aws_iam_role.ec2_role.name
+  role  = aws_iam_role.ec2_role[0].name
 }
 
 locals {
@@ -192,7 +194,7 @@ resource "aws_instance" "debug" {
   key_name               = var.ssh_key_name
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
   subnet_id              = aws_subnet.public.id
-  iam_instance_profile   = var.use_existing_instance_profile ? var.existing_instance_profile_name : aws_iam_instance_profile.ec2_profile[0].name
+  iam_instance_profile   = var.attach_instance_profile ? aws_iam_instance_profile.ec2_profile[0].name : null
 
   root_block_device {
     volume_type = "gp3"

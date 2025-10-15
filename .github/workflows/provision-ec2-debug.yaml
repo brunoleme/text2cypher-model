@@ -63,7 +63,8 @@ jobs:
             -var="environment=${{ github.event.inputs.environment }}" \
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
-            -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}"
+            -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
+            -var="attach_instance_profile=false"
 
       - name: Terraform Apply
         if: ${{ github.event.inputs.auto_apply == 'true' || true }}
@@ -76,6 +77,7 @@ jobs:
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
             -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
+            -var="attach_instance_profile=false" \
             -auto-approve
 
       - name: Output Instance Info
