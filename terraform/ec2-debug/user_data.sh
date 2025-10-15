@@ -4,7 +4,8 @@ set -euxo pipefail
 ENVIRONMENT="${environment}"
 AWS_REGION="${aws_region}"
 
-echo "[DEBUG EC2] Bootstrapping instance for ${ENVIRONMENT} in ${AWS_REGION}"
+# Escape Terraform template interpolation for shell variable references
+echo "[DEBUG EC2] Bootstrapping instance for $${ENVIRONMENT} in $${AWS_REGION}"
 
 apt-get update -y
 apt-get install -y curl unzip jq git htop
