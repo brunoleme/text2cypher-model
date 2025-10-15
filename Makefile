@@ -1,4 +1,4 @@
-.PHONY: install test lint format clean clean-artifacts check run train evaluate clean-venv create-venv clean-all sagemaker-trigger sagemaker-pipeline-trigger
+.PHONY: install test test-training test-inference lint format clean clean-artifacts check run train evaluate clean-venv create-venv clean-all sagemaker-trigger sagemaker-pipeline-trigger
 
 ENV ?= dev
 CONFIG_PATH ?= src/text2cypher/finetuning/config
@@ -7,7 +7,9 @@ CONFIG_FILE := $(CONFIG_PATH)/config.$(ENV).yaml
 help:
 	@echo "Makefile commands:"
 	@echo "  install                      Install dependencies with uv"
-	@echo "  test                         Run tests"
+	@echo "  test                         Run all tests"
+	@echo "  test-training                Run training-related tests only"
+	@echo "  test-inference               Run inference-related tests only"
 	@echo "  lint                         Run code linters"
 	@echo "  format                       Auto-format code"
 	@echo "  clean                        Remove Python and test cache"
@@ -33,7 +35,16 @@ install:
 	pip install -e .[dev]
 
 test:
+	rm -f .coverage .coverage.* || true
 	PYTHONPATH=. ENV=$(ENV) pytest tests/ --cov=src --cov-report=term-missing -s
+
+test-training:
+	rm -f .coverage .coverage.* || true
+	PYTHONPATH=. ENV=$(ENV) pytest tests/unit/test_data.py tests/unit/test_models.py tests/unit/test_metrics.py tests/integration/test_preprocessing_pipeline.py tests/integration/test_training_pipeline.py tests/integration/test_evaluation_pipeline.py tests/e2e/test_full_pipeline.py --cov=src --cov-report=term-missing -s
+
+test-inference:
+	rm -f .coverage .coverage.* || true
+	PYTHONPATH=. ENV=$(ENV) pytest tests/unit/test_inference.py tests/integration/test_inference_service.py tests/e2e/test_inference_e2e.py --cov=src --cov-report=term-missing -s
 
 lint:
 	ruff check .
@@ -63,7 +74,7 @@ clean-venv:
 	rm -rf .venv
 
 create-venv:
-	python3.9 -m venv .venv
+	python3.10 -m venv .venv
 	. .venv/bin/activate && pip install --upgrade pip setuptools
 
 clean-all: clean clean-venv
@@ -101,6 +112,8 @@ PREPROCESSING_INSTANCE_TYPE ?= ml.g4dn.xlarge
 TRAINING_INSTANCE_TYPE ?= ml.g4dn.xlarge
 EVALUATION_INSTANCE_TYPE ?= ml.g4dn.xlarge
 DEPLOYMENT_INSTANCE_TYPE ?= ml.g4dn.xlarge
+PROJECT_CONFIG ?= config.$(ENV)
+INFERENCE_IMAGE_TAG ?= not-used
 
 sagemaker-pipeline-trigger:
 	@echo "Running SageMaker trigger..."
@@ -113,10 +126,13 @@ sagemaker-pipeline-trigger:
 		--env $(ENV) \
 		--wandb-api-key $(WANDB_API_KEY) \
 		--openai-api-key $(OPENAI_API_KEY) \
+		--hf-token $(HF_TOKEN) \
+		--huggingfacehub-api-token $(HUGGINGFACEHUB_API_TOKEN) \
 		--preprocessing-instance-type $(PREPROCESSING_INSTANCE_TYPE) \
 		--preprocessing-instance-count 1 \
 		--training-instance-type $(TRAINING_INSTANCE_TYPE) \
 		--training-instance-count 1 \
 		--evaluation-instance-type $(EVALUATION_INSTANCE_TYPE) \
 		--evaluation-instance-count 1 \
-		--deployment-instance-type $(DEPLOYMENT_INSTANCE_TYPE)
+		--deployment-instance-type $(DEPLOYMENT_INSTANCE_TYPE) \
+		--project-config $(PROJECT_CONFIG)

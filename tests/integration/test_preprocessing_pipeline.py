@@ -18,8 +18,8 @@ def test_preprocessing_pipeline():
 
     out_root = Path(cfg.data.preprocessed_output_data_folder)
     for name in [
-        "preprocessed/notechat_sample_dataset_train.parquet",
-        "preprocessed/notechat_sample_dataset_val.parquet",
-        "preprocessed/notechat_sample_dataset_test.parquet",
+        "preprocessed/text2cypher_train.parquet",
+        "preprocessed/text2cypher_val.parquet",
+        "preprocessed/text2cypher_test.parquet",
     ]:
         assert (out_root / name).exists()

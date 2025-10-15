@@ -1,17 +1,17 @@
 import datetime
+import os
 import platform
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 from loguru import logger
 from peft import LoraConfig, PromptTuningConfig
-import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
+import torch.nn as nn
 from torch.optim import AdamW
 from transformers import BitsAndBytesConfig, get_linear_schedule_with_warmup
 
-class BaseNoteGenerationModel(pl.LightningModule, ABC):
+class BaseText2CypherModel(nn.Module, ABC):
     def __init__(
         self,
         model_name: str,
@@ -29,7 +29,6 @@ class BaseNoteGenerationModel(pl.LightningModule, ABC):
         **kwargs,
     ):
         super().__init__()
-        self.save_hyperparameters()
         self.model_name = model_name
         self.model_type = model_type
         self.learning_rate = learning_rate
@@ -38,8 +37,13 @@ class BaseNoteGenerationModel(pl.LightningModule, ABC):
         self.use_quantization = use_quantization
         self.quantization_type = quantization_type
         self.peft_method = peft_method
-        self.validation_step_outputs = []
-        self.training_step_outputs = []
+        
+        
+        # Memory management
+        self._memory_optimization_enabled = True
+        
+        # Device management
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         logger.info(f"Initializing model: {model_name} ({model_type}), PEFT Method: {peft_method}, Quantization: {use_quantization}")
 
@@ -93,163 +97,186 @@ class BaseNoteGenerationModel(pl.LightningModule, ABC):
         # PEFT Config
         self.peft_config = None
         if self.peft_method == "lora":
+            # Get model-specific target modules
+            target_modules = self._get_lora_target_modules()
+            
             self.peft_config = LoraConfig(
                 r=lora_r,
                 lora_alpha=lora_alpha,
+                target_modules=target_modules,
                 lora_dropout=lora_dropout,
-                target_modules=["q", "v"],
-                task_type="SEQ_2_SEQ_LM",
+                bias="none",
+                task_type="CAUSAL_LM" if self._is_decoder_only() else "SEQ_2_SEQ_LM",
             )
+        
         elif self.peft_method == "prompt_tuning":
+            from peft import TaskType
             self.peft_config = PromptTuningConfig(
+                task_type=TaskType.CAUSAL_LM if self._is_decoder_only() else TaskType.SEQ_2_SEQ_LM,
+                prompt_tuning_init="TEXT",
                 num_virtual_tokens=prompt_tuning_n_tokens,
-                task_type="SEQ_2_SEQ_LM"
+                prompt_tuning_init_text="Convert the following text to a Cypher query:",
+                tokenizer_name_or_path=model_name,
             )
 
-        # Avoid passing kwargs again
-        kwargs.pop("model_type", None)
-        kwargs.pop("use_quantization", None)
-        kwargs.pop("peft_method", None)
-
+        # Initialize the model
         self.model, self.tokenizer = self._initialize_model(
-            model_name=model_name,
-            model_type=model_type,
-            use_quantization=self.use_quantization,
-            peft_method=self.peft_method,
-            **kwargs
+            model_name, model_type, use_quantization, peft_method, **kwargs
         )
 
+    def _is_decoder_only(self) -> bool:
+        """Check if this is a decoder-only model (GPT-style)."""
+        return (
+            "gpt" in self.model_type.lower()
+            or "llama" in self.model_type.lower()
+            or "mistral" in self.model_type.lower()
+            or "phi" in self.model_type.lower()
+            or "decoder" in self.model_type.lower()
+        )
+
+    def _get_lora_target_modules(self):
+        """Get the appropriate target modules for LoRA based on model type."""
+        if "llama" in self.model_type.lower():
+            return ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+        elif "mistral" in self.model_type.lower():
+            return ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+        elif "phi" in self.model_type.lower():
+            return ["q_proj", "k_proj", "v_proj", "dense"]
+        elif "t5" in self.model_type.lower():
+            return ["q", "v", "k", "o", "wi", "wo"]
+        else:
+            logger.warning(f"Unknown model type {self.model_type}, using default LoRA targets")
+            return ["q_proj", "v_proj"]
+
     @abstractmethod
-    def _initialize_model(
-        self,
-        model_name: str,
-        model_type: str,
-        use_quantization: bool,
-        peft_method: Optional[str] = None,
-        **kwargs,
-    ) -> Any:
-        """Initialize model and tokenizer."""
+    def _initialize_model(self, model_name: str, model_type: str, use_quantization: bool, peft_method: Optional[str] = None, **kwargs):
+        """Initialize the model and tokenizer. Must be implemented by subclasses."""
         pass
-
-    def setup(self, stage: Optional[str] = None) -> None:
-        """Setup runs on every GPU/process."""
-        if stage == "fit" and self.trainer.logger:
-            experiment = self.trainer.logger.experiment
-
-            # Add experiment tags
-            experiment.tags = {
-                "base_model_name": self.hparams.model_name,
-                "lr": self.hparams.learning_rate,
-                "gpu": "gpu" if torch.cuda.is_available() else "cpu",
-                "os": platform.system().lower(),
-                "torch": torch.__version__.split("+")[0],
-                "num_gpu": torch.cuda.device_count() if torch.cuda.is_available() else "no_gpu"
-            }
-
-            # Add experiment config
-            experiment.config.update(
-                {
-                    "model": {
-                        "name": self.hparams.model_name,
-                        "learning_rate": self.learning_rate,
-                        "warmup_steps": self.warmup_steps,
-                        "weight_decay": self.weight_decay,
-                    },
-                    "hardware": {
-                        "gpu": torch.cuda.is_available(),
-                        "gpu_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
-                        "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
-                    },
-                    "environment": {
-                        "python_version": platform.python_version(),
-                        "pytorch_version": torch.__version__,
-                        "platform": platform.platform(),
-                    },
-                },
-                allow_val_change=True,
-            )
-
-    def on_fit_start(self) -> None:
-        """Called when fit begins."""
-        if self.trainer.logger:
-            experiment = self.trainer.logger.experiment
-            current_tags = list(experiment.tags) if experiment.tags else []
-
-            new_tags = [
-                f"max_epochs_{self.trainer.max_epochs}",
-                f"precision_{self.trainer.precision}",
-                f"grad_clip_{self.trainer.gradient_clip_val}",
-            ]
-
-            experiment.tags = current_tags + new_tags
-
-            training_config = {
-                "max_epochs": self.trainer.max_epochs,
-                "precision": self.trainer.precision,
-                "gradient_clip_val": self.trainer.gradient_clip_val,
-                "accumulate_grad_batches": self.trainer.accumulate_grad_batches,
-                "strategy_type": self.trainer.strategy.__class__.__name__,
-                "batch_size": self.trainer.datamodule.batch_size
-                if hasattr(self.trainer, "datamodule") else None,
-            }
-
-            experiment.config.update({"training": training_config}, allow_val_change=True)
 
     @abstractmethod
     def forward(self, **inputs) -> Any:
-        """Forward pass of the model."""
+        """Forward pass through the model. Must be implemented by subclasses."""
         pass
 
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
-        outputs = self(**batch)
-        loss = outputs.loss
+    def setup_training(self):
+        """Setup model for training mode."""
+        self.model.train()
+        if hasattr(self.model, 'gradient_checkpointing_enable'):
+            self.model.gradient_checkpointing_enable()
 
-        self.log("train_loss", loss, prog_bar=True)
-        self.training_step_outputs.append(loss.detach().cpu())
+    def setup_inference(self):
+        """Setup model for inference mode."""
+        self.model.eval()
+        if hasattr(self.model, 'gradient_checkpointing_disable'):
+            self.model.gradient_checkpointing_disable()
 
-        return loss
-
-
-    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> None:
-        outputs = self(**batch)
-        loss = outputs.loss
-
-        self.log("val_loss", loss, prog_bar=True)
-        self.validation_step_outputs.append(loss.detach().cpu())
-
-
-    def on_validation_epoch_end(self) -> None:
-        avg_val_loss = torch.stack(self.validation_step_outputs).mean()
-        self.log("epoch_val_loss", avg_val_loss)
-
-        self.validation_step_outputs.clear()
-
-    def on_train_epoch_end(self) -> None:
-        avg_train_loss = torch.stack(self.training_step_outputs).mean()
-        self.log("epoch_train_loss", avg_train_loss)
-
-        self.training_step_outputs.clear()
-
-    def configure_optimizers(self):
+    def get_optimizer_and_scheduler(self, num_training_steps: int, lr_scheduler_config: Dict = None):
+        """Get optimizer and learning rate scheduler."""
+        # Get all parameters that require gradients
+        params = [p for p in self.model.parameters() if p.requires_grad]
+        
         optimizer = AdamW(
-            self.parameters(),
+            params,
             lr=self.learning_rate,
             weight_decay=self.weight_decay,
+            eps=1e-8,
         )
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=self.warmup_steps,
-            num_training_steps=self.trainer.estimated_stepping_batches,
-        )
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "interval": "step",
-            },
-        }
 
-    @abstractmethod
-    def generate_note(self, conversation: str, max_length: Optional[int] = None) -> str:
-        """Generate clinical note from conversation."""
-        pass
+        # Setup scheduler
+        if lr_scheduler_config is None:
+            lr_scheduler_config = {"name": "linear_warmup"}
+
+        scheduler_name = lr_scheduler_config.get("name", "linear_warmup")
+        
+        if scheduler_name == "linear_warmup":
+            scheduler = get_linear_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=self.warmup_steps,
+                num_training_steps=num_training_steps,
+            )
+        else:
+            logger.warning(f"Unknown scheduler: {scheduler_name}, using linear warmup")
+            scheduler = get_linear_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=self.warmup_steps,
+                num_training_steps=num_training_steps,
+            )
+
+        return optimizer, scheduler
+
+    def compute_loss(self, batch):
+        """Compute training loss for a batch."""
+        # Move batch to device
+        batch = {k: v.to(self.device) if hasattr(v, 'to') else v for k, v in batch.items()}
+        
+        # Forward pass
+        outputs = self.forward(**batch)
+        
+        # Extract loss
+        if hasattr(outputs, 'loss'):
+            return outputs.loss
+        else:
+            # Fallback for models that don't return loss directly
+            logits = outputs.logits if hasattr(outputs, 'logits') else outputs
+            labels = batch.get('labels')
+            if labels is not None:
+                loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
+                return loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
+            else:
+                logger.warning("No labels provided and model doesn't return loss")
+                return torch.tensor(0.0, requires_grad=True, device=self.device)
+
+    def compute_validation_metrics(self, batch, batch_idx):
+        """Compute validation metrics for a batch."""
+        # Basic implementation - subclasses can override for specific metrics
+        loss = self.compute_loss(batch)
+        return {"val_loss": loss.item()}
+
+    def clear_memory_if_needed(self, batch_idx: int, is_validation: bool = False):
+        """Clear GPU memory periodically to prevent OOM."""
+        if self._memory_optimization_enabled and batch_idx % 10 == 0:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+    def to(self, device):
+        """Move model to device."""
+        self.device = device
+        if hasattr(self, 'model'):
+            self.model.to(device)
+        return super().to(device)
+
+    def parameters(self):
+        """Get model parameters."""
+        if hasattr(self, 'model'):
+            return self.model.parameters()
+        return super().parameters()
+
+    def named_parameters(self):
+        """Get named model parameters."""
+        if hasattr(self, 'model'):
+            return self.model.named_parameters()
+        return super().named_parameters()
+
+    def state_dict(self):
+        """Get model state dict."""
+        if hasattr(self, 'model'):
+            return self.model.state_dict()
+        return super().state_dict()
+
+    def load_state_dict(self, state_dict, strict=True):
+        """Load model state dict."""
+        if hasattr(self, 'model'):
+            return self.model.load_state_dict(state_dict, strict=strict)
+        return super().load_state_dict(state_dict, strict=strict)
+
+    def train(self, mode=True):
+        """Set training mode."""
+        if hasattr(self, 'model'):
+            self.model.train(mode)
+        return super().train(mode)
+
+    def eval(self):
+        """Set evaluation mode."""
+        if hasattr(self, 'model'):
+            self.model.eval()
+        return super().eval()
