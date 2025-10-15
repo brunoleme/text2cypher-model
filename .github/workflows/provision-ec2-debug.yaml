@@ -26,11 +26,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
@@ -54,9 +53,7 @@ jobs:
             -var="environment=${{ github.event.inputs.environment }}" \
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
-            -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
-            -var="use_existing_instance_profile=true" \
-            -var="existing_instance_profile_name=${{ secrets.AWS_EC2_INSTANCE_PROFILE_NAME }}"
+            -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}"
 
       - name: Terraform Apply
         if: ${{ github.event.inputs.auto_apply == 'true' || true }}
@@ -69,8 +66,6 @@ jobs:
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
             -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
-            -var="use_existing_instance_profile=true" \
-            -var="existing_instance_profile_name=${{ secrets.AWS_EC2_INSTANCE_PROFILE_NAME }}" \
             -auto-approve
 
       - name: Output Instance Info
