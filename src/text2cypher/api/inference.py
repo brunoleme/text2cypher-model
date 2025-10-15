@@ -3,25 +3,22 @@ from pydantic import BaseModel, ValidationError, Field, validator
 from loguru import logger
 import os
 from pathlib import Path
-import psycopg2
-import requests
+import torch
+from typing import Optional
 
 from text2cypher.api.config import settings
-from text2cypher.finetuning.models.t5_model import T5NoteGenerationModel
-from text2cypher.finetuning.data.notechat_preprocessing import NoteChatDataPreprocessingModule
+from text2cypher.finetuning.models.llama_model import LlamaText2CypherModel
 from text2cypher.finetuning.utils.logger import setup_logger
-from text2cypher.finetuning.utils.text_utils import clean_conversation
-
-DECODER_HOST = os.getenv("DECODER_HOST", "http://localhost:8001")
+from text2cypher.finetuning.utils.tokenization_utils import normalize_cypher_query
 
 # Initialize model variable at module level
 model = None
 
 app = FastAPI(
-    title="Clinical Notes Generator API",
-    description="API for generating clinical notes from doctor-patient conversations",
+    title="Text2Cypher Generator API",
+    description="API for generating Cypher queries from natural language text",
     version="1.0.0",
-    docs_url="/",
+    docs_url="/docs",
     redoc_url="/redoc"
 )
 
@@ -34,106 +31,130 @@ async def load_model():
     """Load model on startup."""
     try:
         global model
-        model = T5NoteGenerationModel.load_model_from_checkpoint(
-            checkpoint_path=str(settings.model_path),
-        )
+        model_path = os.getenv("MODEL_PATH", "/app/models/hf_model")
+        logger.info(f"Loading model from: {model_path}")
+        
+        # Try loading from Hugging Face format first, then fallback to checkpoint
+        if os.path.exists(model_path) and os.path.isdir(model_path):
+            model = LlamaText2CypherModel.from_pretrained(model_path)
+        else:
+            # Fallback to checkpoint loading
+            model = LlamaText2CypherModel.load_model_from_checkpoint(
+                checkpoint_path=str(model_path),
+            )
+        
+        model.setup_inference()
         logger.info("Model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load model: {str(e)}")
         raise RuntimeError("Failed to initialize model")
 
-@app.get("/api")
+@app.get("/")
 async def root():
     return {
-        "name": "Clinical Notes Generator API",
+        "message": "Text2Cypher Generator API",
         "version": "1.0.0",
-        "endpoints": {
-            "/": "API documentation (Swagger UI)",
-            "/redoc": "API documentation (ReDoc)",
-            "/api": "This information",
-            "/health": "Health check endpoint",
-            "/generate_note": "Generate clinical notes from conversations"
-        }
+        "endpoints": ["/health", "/generate_cypher", "/docs"]
     }
 
-class ConversationRequest(BaseModel):
-    conversation: str = Field(..., min_length=1, description="The doctor-patient conversation text")
-    max_length: int = Field(default=512, ge=1, le=1024, description="Maximum length of generated note")
+class Text2CypherRequest(BaseModel):
+    question: str = Field(..., min_length=1, description="Natural language question to convert to Cypher query")
+    schema: Optional[str] = Field(None, description="Graph database schema (nodes, relationships, properties)")
+    max_length: int = Field(default=512, ge=1, le=1024, description="Maximum length of generated Cypher query")
 
-    @validator('conversation')
-    def clean_conversation_input(cls, v):
-        logger.info("Validating conversation input")
+    @validator('question')
+    def clean_question_input(cls, v):
+        logger.info("Validating question input")
         try:
             v = v.replace('\n', ' ').replace('\r', ' ')
             v = ' '.join(v.split())
-            logger.info("Conversation cleaned in validator")
+            logger.info("Question cleaned in validator")
             return v
         except Exception as e:
-            logger.error(f"Error in conversation validator: {str(e)}")
-            raise ValueError(f"Invalid conversation format: {str(e)}")
+            logger.error(f"Error in question validator: {str(e)}")
+            raise ValueError(f"Invalid question format: {str(e)}")
+
+    @validator('schema')
+    def clean_schema_input(cls, v):
+        if v is None:
+            return v
+        logger.info("Validating schema input")
+        try:
+            # Keep schema formatting more intact since it's structured
+            v = v.strip()
+            logger.info("Schema cleaned in validator")
+            return v
+        except Exception as e:
+            logger.error(f"Error in schema validator: {str(e)}")
+            raise ValueError(f"Invalid schema format: {str(e)}")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "conversation": "Doctor: How are you feeling today? Patient: I have a headache.",
-                "max_length": 512
+                "question": "Find all patients with diabetes",
+                "schema": "Node properties: - **Patient** - `name`: STRING - **Condition** - `name`: STRING Relationships: (:Patient)-[:HAS_CONDITION]->(:Condition)",
+                "max_length": 256
             }
         }
 
-class NoteResponse(BaseModel):
-    clinical_note: str
+class CypherResponse(BaseModel):
+    cypher_query: str
 
     class Config:
         schema_extra = {
             "example": {
-                "clinical_note": "Patient presents with headache..."
+                "cypher_query": "MATCH (p:Patient)-[:HAS_CONDITION]->(c:Condition {name: 'diabetes'}) RETURN p"
             }
         }
 
-@app.post("/generate_note", response_model=NoteResponse)
-async def generate_note(request: ConversationRequest):
-    logger.info("Incoming request to /generate_note endpoint")
+@app.post("/generate_cypher", response_model=CypherResponse)
+async def generate_cypher(request: Text2CypherRequest):
+    logger.info("Incoming request to /generate_cypher endpoint")
     logger.debug("Raw request received")
     try:
-        logger.info("Received generate_note request")
+        logger.info("Received generate_cypher request")
         logger.debug(f"Original request: {request.dict()}")
-        if not request.conversation:
-            raise HTTPException(status_code=400, detail="Empty conversation")
-        conversation = clean_conversation(NoteChatDataPreprocessingModule.format_conversation(request.conversation))
-        logger.info("Generating clinical note...")
-        clinical_note = model.generate_note(conversation=conversation, max_length=request.max_length)
-        logger.info("Note generation successful")
-        return NoteResponse(clinical_note=clinical_note)
+        if not request.question:
+            raise HTTPException(status_code=400, detail="Empty question")
+        
+        logger.info("Generating Cypher query...")
+        cypher_query = model.generate_cypher(
+            question=request.question, 
+            schema=request.schema, 
+            max_length=request.max_length
+        )
+        
+        # Normalize the generated Cypher query
+        normalized_query = normalize_cypher_query(cypher_query)
+        
+        logger.info("Cypher generation successful")
+        return CypherResponse(cypher_query=normalized_query)
     except ValidationError as e:
         logger.error(f"Validation error: {str(e)}")
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        logger.error(f"Error generating note: {str(e)}")
+        logger.error(f"Error generating Cypher: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/generate_note_decoupled", response_model=NoteResponse)
-async def generate_note_with_decoupling(request: ConversationRequest):
-    logger.info("Received request for distributed generation")
-    conversation = f"summarize: {NoteChatDataPreprocessingModule.format_conversation(request.conversation)}"
-    conversation = clean_conversation(conversation)
-    prefill_data = model.prefill(conversation, max_length=request.max_length)
-    decode_response = requests.post(
-        f"{DECODER_HOST}/decode",
-        json={
-            "encoder_hidden_states": prefill_data["encoder_hidden_states"],
-            "attention_mask": prefill_data["attention_mask"],
-            "max_length": request.max_length,
-        },
-        timeout=30,
-    )
-    if decode_response.status_code != 200:
-        raise HTTPException(status_code=500, detail="Decoding failed")
-    clinical_note = decode_response.json()["generated_note"]
-    return NoteResponse(clinical_note=clinical_note)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Health check endpoint with model status."""
+    try:
+        global model
+        model_loaded = model is not None and hasattr(model, 'is_loaded') and model.is_loaded()
+        
+        return {
+            "status": "healthy" if model_loaded else "unhealthy",
+            "model_loaded": model_loaded,
+            "timestamp": logger._core.start_time.isoformat() if hasattr(logger, '_core') else None
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "model_loaded": False,
+            "error": str(e)
+        }
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -146,43 +167,3 @@ async def log_requests(request: Request, call_next):
         logger.error(f"Could not log request body: {str(e)}")
     response = await call_next(request)
     return response
-
-# @app.post("/enqueue")
-# async def enqueue(request: ConversationRequest):
-#     conn = psycopg2.connect(
-#         dbname=os.getenv("DB_NAME"),
-#         user=os.getenv("DB_USER"),
-#         password=os.getenv("DB_PASSWORD"),
-#         host=os.getenv("DB_HOST"),
-#         port=os.getenv("DB_PORT")
-#     )
-#     try:
-#         cursor = conn.cursor()
-#         cursor.execute("INSERT INTO inference_queue (conversation) VALUES (%s)", (request.conversation,))
-#         conn.commit()
-#         cursor.close()
-#         conn.close()
-#         return {"status": "queued"}
-#     except Exception as e:
-#         logger.exception("DB insert failed")
-#         raise HTTPException(status_code=500, detail="Failed to queue request")
-
-# @app.get("/trigger_batch_inference")
-# async def trigger_batch():
-#     try:
-#         from src.batch_jobs.run_batch_inference import main as batch_main
-#         batch_main()
-#         return {"status": "success", "message": "Batch inference triggered."}
-#     except Exception as e:
-#         logger.error(f"Batch inference failed: {e}")
-#         raise HTTPException(status_code=500, detail="Batch processing failed.")
-
-# @app.get("/trigger_batch_inference_decoupled")
-# async def trigger_batch_decoupled():
-#     try:
-#         from src.batch_jobs.run_batch_inference_decoupled import main as batch_main
-#         batch_main()
-#         return {"status": "success", "message": "Batch inference triggered."}
-#     except Exception as e:
-#         logger.error(f"Batch inference failed: {e}")
-#         raise HTTPException(status_code=500, detail="Batch processing failed.")

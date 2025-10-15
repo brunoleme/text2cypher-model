@@ -30,7 +30,7 @@ def test_evaluation_pipeline():
 
     with (
         patch("text2cypher.finetuning.evaluate_model.load_model") as mock_load_model,
-        patch("text2cypher.finetuning.evaluate_model.compute_group_metrics") as mock_compute_metrics,
+        patch("text2cypher.finetuning.evaluate_model.compute_group_metrics_from_rows") as mock_compute_metrics,
         patch("text2cypher.finetuning.evaluate_model.calculate_average_latency", return_value=0.1),
         patch("text2cypher.finetuning.evaluate_model.calculate_model_size_in_params", return_value=1234567)
     ):
@@ -38,15 +38,8 @@ def test_evaluation_pipeline():
         mock_model = MagicMock()
         mock_load_model.return_value = mock_model
         mock_compute_metrics.side_effect = [
-            pd.DataFrame({"rouge_score": [0.0], "bleu_score": [0.0]}),
-            pd.DataFrame({"bert_score": [0.847899]}),
-            pd.DataFrame({
-                "factual_consistency": [3.0],
-                "relevance": [5.0],
-                "completeness": [3.0],
-                "conciseness": [3.666667],
-                "clarity": [3.0],
-            })
+            pd.DataFrame({"exact_match": [0.0], "bleu_score": [0.0]}),
+            pd.DataFrame({"bert_score": [0.847899], "cypher_lint_rate": [1.0]}),
         ]
 
         evaluate_model(cfg)

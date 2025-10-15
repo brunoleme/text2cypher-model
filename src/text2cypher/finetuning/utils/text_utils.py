@@ -4,7 +4,7 @@ def replace_first_dash(text: str) -> str:
     """
     Replace the first dash with a slash if there are 3 or more dashes.
     Useful for transforming model names into paths.
-    Example: 't5-small-notechat-512' -> 't5/small-notechat-512'
+    Example: 'llama-3.2-1b' -> 'llama/3.2-1b'
     """
     if text.count("-") >= 3:
         return text.replace("-", "/", 1)

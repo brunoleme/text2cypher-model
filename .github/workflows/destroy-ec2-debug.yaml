@@ -1,0 +1,61 @@
+name: Destroy EC2 Debug Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment (e.g., dev)"
+        required: true
+        default: dev
+      aws_region:
+        description: "AWS Region"
+        required: true
+        default: us-east-1
+      instance_type:
+        description: "EC2 Instance Type (for consistency with state vars)"
+        required: true
+        default: g4dn.xlarge
+      ssh_key_name:
+        description: "EC2 Key Pair Name (for consistency with state vars)"
+        required: true
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ github.event.inputs.aws_region }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Terraform Init
+        working-directory: terraform/ec2-debug
+        env:
+          TF_CLI_ARGS_init: "-input=false"
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: terraform/ec2-debug
+        env:
+          TF_CLI_ARGS_destroy: "-input=false -auto-approve"
+        run: |
+          terraform destroy \
+            -var="environment=${{ github.event.inputs.environment }}" \
+            -var="aws_region=${{ github.event.inputs.aws_region }}" \
+            -var="instance_type=${{ github.event.inputs.instance_type }}" \
+            -var="ssh_key_name=${{ github.event.inputs.ssh_key_name }}" \
+            -auto-approve
+

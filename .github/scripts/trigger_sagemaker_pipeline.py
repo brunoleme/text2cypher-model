@@ -13,6 +13,8 @@ def parse_args():
     parser.add_argument("--env", required=True, choices=["dev", "staging", "prod"], help="Environment")
     parser.add_argument("--wandb-api-key", required=True, help="W&B API Key")
     parser.add_argument("--openai-api-key", required=True, help="Open AI API Key")
+    parser.add_argument("--hf-token", required=True, help="Hugging Face Token")
+    parser.add_argument("--huggingfacehub-api-token", required=False, help="HuggingFace Hub API Token")
     parser.add_argument("--preprocessing-instance-type", default="ml.m5.large", help="Instance type")
     parser.add_argument("--preprocessing-instance-count", type=int, default=1)
     parser.add_argument("--training-instance-type", default="ml.m5.large", help="Instance type")
@@ -20,6 +22,7 @@ def parse_args():
     parser.add_argument("--evaluation-instance-type", default="ml.m5.large", help="Instance type")
     parser.add_argument("--evaluation-instance-count", type=int, default=1)
     parser.add_argument("--deployment-instance-type", default="ml.m5.large", help="Instance type")
+    parser.add_argument("--project-config", help="Project configuration to use (e.g., config.dev, config.staging, config.prod)")
     return parser.parse_args()
 
 
@@ -35,14 +38,17 @@ def main():
             "ImageURI": args.image_uri,
             "InferenceImageURI": args.inference_image_uri,
             # "RoleARN": args.role_arn,
-            # "JobPrefixName": "Text2Cypher",
+            # "JobPrefixName": "text2cypher",
             "Environment": args.env,
+            "ProjectConfig": args.project_config if args.project_config else f"config.{args.env}",  # Use provided config or environment-specific default
             "WandbApiKey": args.wandb_api_key,
             "OpenAIApiKey": args.openai_api_key,
-            "InputDataFolderURI": "s3://bl-portfolio-ml-sagemaker-source-data/notechat-dataset/",
-            "PreprocessedOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/input/preprocessed",
-            "TrainingOutputS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts",
-            "PackagedModelS3Uri": f"s3://bl-portfolio-ml-sagemaker-{args.env}/output/artifacts/{args.pipeline_run_id}/model.tar.gz",
+            "HFToken": args.hf_token,
+            "HuggingFaceHubApiToken": args.huggingfacehub_api_token or "",
+            "InputDataFolderURI": "s3://text2cypher-model-source-data/text2cypher-dataset/",
+            "PreprocessedOutputS3Uri": f"s3://text2cypher-model-{args.env}/input/preprocessed",
+            "TrainingOutputS3Uri": f"s3://text2cypher-model-{args.env}/output/artifacts",
+            # PackagedModelS3Uri removed - using checkpoints directly
             "PreprocessingInstanceType": args.preprocessing_instance_type,
             "PreprocessingInstanceCount": args.preprocessing_instance_count,
             "TrainingInstanceType": args.training_instance_type,
@@ -52,7 +58,7 @@ def main():
             "DeploymentInstanceType": args.deployment_instance_type
         }
     )
-    execution.wait(delay=60, max_attempts=240)
+    execution.wait(delay=60, max_attempts=480)  # 8 hours total wait time
 
 if __name__ == "__main__":
     try:

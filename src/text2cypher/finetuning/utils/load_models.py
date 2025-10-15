@@ -5,8 +5,7 @@ import boto3
 from loguru import logger
 
 MODEL_CLASSES = {
-    "t5": "text2cypher.finetuning.models.t5_model.T5NoteGenerationModel",
-    # Add more model types here as needed
+    "llama": "text2cypher.finetuning.models.llama_model.LlamaText2CypherModel",
 }
 
 
