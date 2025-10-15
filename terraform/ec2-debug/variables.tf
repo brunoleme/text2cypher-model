@@ -38,3 +38,15 @@ variable "attach_instance_profile" {
   default     = false
 }
 
+variable "ami_id" {
+  description = "Optional explicit AMI ID to use (overrides discovery)"
+  type        = string
+  default     = ""
+}
+
+variable "ami_name_filter" {
+  description = "AMI name wildcard to discover DLAMI PyTorch"
+  type        = string
+  default     = "Deep Learning AMI GPU PyTorch * (Ubuntu 22.04) *"
+}
+

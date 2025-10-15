@@ -32,12 +32,13 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_ami" "gpu_ami" {
+  count       = var.ami_id == "" ? 1 : 0
   most_recent = true
   owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["Deep Learning AMI GPU PyTorch 2.0.* (Ubuntu 20.04) *"]
+    values = [var.ami_name_filter]
   }
 
   filter {
@@ -189,7 +190,7 @@ locals {
 }
 
 resource "aws_instance" "debug" {
-  ami                    = data.aws_ami.gpu_ami.id
+  ami                    = var.ami_id != "" ? var.ami_id : data.aws_ami.gpu_ami[0].id
   instance_type          = var.instance_type
   key_name               = var.ssh_key_name
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
