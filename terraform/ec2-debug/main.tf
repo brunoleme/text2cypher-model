@@ -197,10 +197,17 @@ locals {
     environment = var.environment,
     aws_region  = var.aws_region,
   }))
+
+  # Select AMI safely: prefer explicit var.ami_id, else data lookup when available.
+  # During destroy with skip_ami_lookup=true, the data source has count=0; avoid indexing [0].
+  selected_ami = coalesce(
+    var.ami_id != "" ? var.ami_id : null,
+    length(data.aws_ami.gpu_ami) > 0 ? data.aws_ami.gpu_ami[0].id : null,
+  )
 }
 
 resource "aws_instance" "debug" {
-  ami                    = var.ami_id != "" ? var.ami_id : data.aws_ami.gpu_ami[0].id
+  ami                    = local.selected_ami
   instance_type          = var.instance_type
   key_name               = var.ssh_key_name
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
