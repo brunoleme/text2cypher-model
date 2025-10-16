@@ -50,3 +50,9 @@ variable "ami_name_filter" {
   default     = "Deep Learning AMI GPU PyTorch 2.0.* (Ubuntu 20.04) *"
 }
 
+variable "skip_ami_lookup" {
+  description = "If true, skip AMI discovery (useful for destroy)"
+  type        = bool
+  default     = false
+}
+

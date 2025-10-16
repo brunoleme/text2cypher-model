@@ -60,6 +60,7 @@ jobs:
             -var="instance_type=g4dn.xlarge" \
             -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
             -var="ami_id=${{ secrets.AWS_EC2_DEBUG_AMI_ID }}" \
+            -var="skip_ami_lookup=true" \
             -var="attach_instance_profile=false" \
             -auto-approve
 

@@ -32,7 +32,7 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_ami" "gpu_ami" {
-  count       = var.ami_id == "" ? 1 : 0
+  count       = var.skip_ami_lookup || var.ami_id != "" ? 0 : 1
   most_recent = true
   owners      = ["amazon"]
 
