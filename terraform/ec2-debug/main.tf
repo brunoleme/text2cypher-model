@@ -200,9 +200,10 @@ locals {
 
   # Select AMI safely: prefer explicit var.ami_id, else data lookup when available.
   # During destroy with skip_ami_lookup=true, the data source has count=0; avoid indexing [0].
-  selected_ami = coalesce(
-    var.ami_id != "" ? var.ami_id : null,
-    length(data.aws_ami.gpu_ami) > 0 ? data.aws_ami.gpu_ami[0].id : null,
+  # If neither is available (e.g., destroy with no ami_id provided), fall back to a dummy AMI ID.
+  # This value is only used to satisfy provider schema during destroy and will not be created/applied.
+  selected_ami = var.ami_id != "" ? var.ami_id : (
+    var.skip_ami_lookup ? "ami-00000000000000000" : try(data.aws_ami.gpu_ami[0].id, "ami-00000000000000000")
   )
 }
 
