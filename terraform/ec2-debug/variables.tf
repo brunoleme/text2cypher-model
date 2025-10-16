@@ -45,9 +45,20 @@ variable "ami_id" {
 }
 
 variable "ami_name_filter" {
-  description = "AMI name wildcard to discover DLAMI PyTorch"
+  description = "Single AMI name wildcard to discover DLAMI PyTorch (overrides ami_name_filters when non-empty)"
   type        = string
-  default     = "Deep Learning AMI GPU PyTorch 2.0.* (Ubuntu 20.04) *"
+  default     = ""
+}
+
+variable "ami_name_filters" {
+  description = "Fallback list of AMI name wildcards to try for DLAMI PyTorch"
+  type        = list(string)
+  default     = [
+    "Deep Learning AMI GPU PyTorch 2.0.* (Ubuntu 22.04) *",
+    "Deep Learning AMI GPU PyTorch 2.0.* (Ubuntu 20.04) *",
+    "Deep Learning AMI GPU PyTorch * (Ubuntu 22.04) *",
+    "Deep Learning AMI GPU PyTorch * (Ubuntu 20.04) *",
+  ]
 }
 
 variable "skip_ami_lookup" {

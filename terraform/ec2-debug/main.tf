@@ -36,9 +36,12 @@ data "aws_ami" "gpu_ami" {
   most_recent = true
   owners      = ["amazon"]
 
-  filter {
-    name   = "name"
-    values = [var.ami_name_filter]
+  dynamic "filter" {
+    for_each = var.ami_name_filter != "" ? [var.ami_name_filter] : var.ami_name_filters
+    content {
+      name   = "name"
+      values = [filter.value]
+    }
   }
 
   filter {

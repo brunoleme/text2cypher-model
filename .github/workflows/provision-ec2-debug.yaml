@@ -64,7 +64,7 @@ jobs:
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
             -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
-            -var="ami_name_filter=Deep Learning AMI GPU PyTorch 2.0.* (Ubuntu 20.04) *" \
+            -var="ami_name_filter=" \
             -var="attach_instance_profile=false" \
             -var="ami_id=${{ secrets.AWS_EC2_DEBUG_AMI_ID }}"
 
@@ -79,7 +79,7 @@ jobs:
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="instance_type=${{ github.event.inputs.instance_type }}" \
             -var="ssh_key_name=${{ env.EC2_SSH_KEY_NAME }}" \
-            -var="ami_name_filter=Deep Learning AMI GPU PyTorch 2.0.* (Ubuntu 20.04) *" \
+            -var="ami_name_filter=" \
             -var="attach_instance_profile=false" \
             -var="ami_id=${{ secrets.AWS_EC2_DEBUG_AMI_ID }}" \
             -auto-approve
